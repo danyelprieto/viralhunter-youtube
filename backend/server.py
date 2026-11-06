@@ -99,6 +99,8 @@ def api_search_niche(
         return {
             "query": q,
             "count": search_res.get("count", 0),
+            "strict_count": search_res.get("strict_count", 0),
+            "is_relaxed": search_res.get("is_relaxed", False),
             "relaxed_notice": search_res.get("relaxed_notice"),
             "filters": {
                 "max_subscribers": max_subs,
