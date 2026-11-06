@@ -4,8 +4,14 @@ Puerto: 8500 | Sin dependencias externas pesadas | Integración con Obsidian
 """
 
 import os
+import sys
 import json
 from datetime import datetime
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
+
 from fastapi import FastAPI, HTTPException, Body, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
