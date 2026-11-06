@@ -1315,11 +1315,11 @@
                             <span>🎯 Clonar Tal Cual (Fiel a la Original)</span>
                         </button>
                         <button id="btn-generate-ai-thumb" onclick="generateThumbnailWithAI(false)" class="btn-execute-search" style="justify-content: center; font-size: 14px; padding: 13px;">
-                            <span>✨ Recrear con Modificaciones</span>
+                            <span>🎨 Solo cambiar colores (variación sutil)</span>
                         </button>
                     </div>
                     <div style="margin-top: 10px; font-size: 11px; color: var(--text-dim); line-height: 1.5;">
-                        ℹ️ "Clonar Tal Cual" recrea la miniatura usando la original como referencia (imagen a imagen): queda muy parecida, no idéntica al píxel, porque la IA siempre varía algo. Para una copia exacta, usa "📥 Descargar Original HD" y edítale solo el texto.
+                        ℹ️ "Clonar Tal Cual" recrea la miniatura usando la original como referencia (imagen a imagen): queda muy parecida, no idéntica al píxel. "Solo cambiar colores" deja la misma miniatura y solo le mueve la paleta un poco (cada clic, una dirección distinta). El texto en español se lee de la miniatura original y se pone solo encima del clon. Para una copia exacta, usa "📥 Descargar Original HD" y edítale solo el texto.
                     </div>
                 </div>
 
@@ -1522,6 +1522,20 @@
         let activeTranscriptText = "";
         let currentGeneratedImage = null;
         let originalDetectedPrompt = "";
+        // Texto real escrito en la miniatura original (en español, tal cual),
+        // leído de la imagen con OCR. Antes el texto venía de una frase
+        // genérica del backend ("CALLA Y OBSERVA", "EL GRAN ENGAÑO"...) según
+        // la categoría, y nunca era el título real de la miniatura.
+        let originalThumbText = "";
+        // Direcciones de variación de color para "Solo cambiar colores": el
+        // cambio es solo de paleta, nunca de sujeto, pose o composición.
+        const COLOR_VARIATIONS = [
+            "shift the color palette slightly warmer, with golden tones",
+            "shift the color palette slightly cooler, with teal-blue tones",
+            "make the colors slightly more saturated and vibrant",
+            "make the colors slightly more muted and cinematic, with soft desaturation",
+            "give it a subtle teal-and-orange cinematic color grade"
+        ];
         // Miniatura original en base64 (vía /api/thumbnail-proxy), en caché por
         // video: es la imagen de referencia para el clonado imagen-a-imagen.
         // Sin ella, FLUX solo recibe texto y la "copia" sale inventada.
@@ -1622,6 +1636,31 @@
                 } else {
                     showToast("Escaneo completado. Prompt listo.");
                 }
+
+                // Capturar el texto REAL de la miniatura original (el título
+                // en español que lleva escrito), para ponerlo en el clon.
+                // Primero OCR (puter.ai.img2txt, hecho para leer texto de
+                // imágenes); si no lee nada, se le pregunta a Visión solo por
+                // el texto. Si tampoco hay texto, queda la frase del backend.
+                try {
+                    let ocrText = "";
+                    if (window.puter && puter.ai && puter.ai.img2txt) {
+                        const ocrResp = await puter.ai.img2txt(imgDataUrl);
+                        ocrText = (typeof ocrResp === 'string') ? ocrResp : (ocrResp?.text || "");
+                    }
+                    if (!ocrText || ocrText.trim().length < 2) {
+                        const textResp = await puter.ai.chat("Transcribe exactly the text written on this thumbnail image, preserving the original language (Spanish). Return ONLY the text, no explanation.", imgDataUrl, { model: 'gpt-4o' });
+                        ocrText = (typeof textResp === 'string') ? textResp : (textResp?.message?.content || textResp?.text || "");
+                    }
+                    ocrText = (ocrText || "").replace(/\s+/g, " ").trim();
+                    if (ocrText) {
+                        originalThumbText = ocrText;
+                        const overlayInput = document.getElementById('ai-overlay-text');
+                        if (overlayInput) overlayInput.value = ocrText;
+                    }
+                } catch (eOcr) {
+                    console.warn("No se pudo leer el texto de la miniatura:", eOcr);
+                }
             } catch (err) {
                 console.warn("Error en escaneo con visión:", err);
                 showToast("Visión no disponible temporalmente. Se mantiene el prompt detectado.");
@@ -1661,7 +1700,7 @@
             statusBox.style.color = '#93c5fd';
             statusBox.innerText = isExact
                 ? "Clonando la miniatura usando la original como referencia (imagen a imagen) en 1280x720..."
-                : "Renderizando tu miniatura modificada con FLUX.1 en 1280x720...";
+                : "Aplicando una variación sutil de color a la miniatura original...";
 
             try {
                 let imgEl;
@@ -1675,10 +1714,10 @@
                 // fallan los dos modelos, se cae al camino viejo de solo texto
                 // y se avisa: esa recreación NO quedará igual a la original.
                 let usedTextOnlyFallback = false;
+                const editModels = ["gpt-image-2", "gemini-nano-banana-2.1"];
                 if (isExact) {
                     const refImage = await getOriginalThumbnailDataUrl();
                     const editPrompt = "Recreate this exact YouTube thumbnail image as faithfully as possible from the input image: keep the same subject, face, facial expression, pose, clothing, background, composition, framing, lighting and color palette. Do not add, remove, move or restyle any element. Do not add any text. Details to preserve: " + promptText;
-                    const editModels = ["gpt-image-2", "gemini-nano-banana-2.1"];
                     let lastErr = null;
                     if (refImage) {
                         for (const modelId of editModels) {
@@ -1700,6 +1739,38 @@
                     if (!imgEl || !imgEl.src) {
                         console.warn("Clonado con referencia no disponible, cayendo a solo texto:", lastErr);
                         usedTextOnlyFallback = true;
+                    }
+                } else {
+                    // VARIACIÓN SOLO DE COLORES: también imagen a imagen con
+                    // la original como referencia, pero la única instrucción es
+                    // un cambio sutil de paleta (una dirección distinta en cada
+                    // clic). Nada de regenerar por texto: eso cambiaba sujeto,
+                    // pose y composición. Si la edición falla, NO se genera una
+                    // imagen distinta por texto; se avisa y se reintenta.
+                    const refImage = await getOriginalThumbnailDataUrl();
+                    if (!refImage) {
+                        throw new Error("No se pudo cargar la miniatura original como referencia para variar sus colores.");
+                    }
+                    const colorDir = COLOR_VARIATIONS[Math.floor(Math.random() * COLOR_VARIATIONS.length)];
+                    const colorPrompt = "Edit this exact YouTube thumbnail image with ONLY a subtle color change: " + colorDir + ". Keep everything else exactly the same: same subject, face, facial expression, pose, clothing, background, composition, framing and layout. Do not add, remove, move or restyle any element. Do not add any text. Details to preserve: " + promptText;
+                    let lastErr = null;
+                    for (const modelId of editModels) {
+                        try {
+                            imgEl = await puter.ai.txt2img({
+                                prompt: colorPrompt,
+                                model: modelId,
+                                input_image: refImage,
+                                ratio: { w: 16, h: 9 }
+                            });
+                            if (imgEl && imgEl.src) break;
+                        } catch (errEdit) {
+                            console.warn(`Modelo de edición ${modelId} falló en variación de color, probando el siguiente:`, errEdit);
+                            lastErr = errEdit;
+                            imgEl = null;
+                        }
+                    }
+                    if (!imgEl || !imgEl.src) {
+                        throw new Error("No se pudo aplicar la variación de color con la imagen original como referencia. Reintenta en unos segundos. (" + (lastErr && lastErr.message ? lastErr.message : "sin referencia") + ")");
                     }
                 }
                 if (!imgEl || !imgEl.src) {
@@ -1732,10 +1803,13 @@
                         if (isExact && usedTextOnlyFallback) {
                             showToast("Clonado sin la imagen original como referencia: es solo una recreación por texto y no quedará igual. Reintenta en unos segundos.");
                         } else {
-                            showToast(isExact ? "¡Miniatura clonada con la original como referencia!" : "¡Miniatura modificada con éxito!");
+                            showToast(isExact ? "¡Miniatura clonada con la original como referencia!" : "¡Variación de color lista! Misma miniatura, otros colores.");
                         }
 
-                        const suggestedText = currentAdaptation?.thumbnail_cloner?.hook_text || "";
+                        // Texto del clon: primero el título real leído de la
+                        // miniatura original (en español); si no se pudo leer,
+                        // la frase sugerida del backend.
+                        const suggestedText = originalThumbText || currentAdaptation?.thumbnail_cloner?.hook_text || "";
                         if (suggestedText) {
                             document.getElementById('ai-overlay-text').value = suggestedText;
                             applyOverlayText();
@@ -1751,7 +1825,11 @@
                 statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
                 statusBox.style.borderColor = '#ef4444';
                 statusBox.style.color = '#fca5a5';
-                statusBox.innerText = "Hubo una pausa temporal en el servicio de IA. Puedes reintentar en unos segundos.";
+                // Si el fallo trae mensaje propio (p. ej. la variación de
+                // color no se pudo aplicar), mostrarlo en vez del genérico.
+                statusBox.innerText = (e && e.message && e.message.indexOf("variación de color") !== -1)
+                    ? e.message
+                    : "Hubo una pausa temporal en el servicio de IA. Puedes reintentar en unos segundos.";
                 if (btnExact) btnExact.disabled = false;
                 if (btnMod) btnMod.disabled = false;
                 showToast("Error en el servicio de IA");
@@ -2070,6 +2148,7 @@
 
             // Resetear canvas de IA
             currentGeneratedImage = null;
+            originalThumbText = "";
             const canvas = document.getElementById('canvas-ai-thumb');
             if (canvas) {
                 const ctx = canvas.getContext('2d');
