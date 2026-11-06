@@ -1318,6 +1318,9 @@
                             <span>✨ Recrear con Modificaciones</span>
                         </button>
                     </div>
+                    <div style="margin-top: 10px; font-size: 11px; color: var(--text-dim); line-height: 1.5;">
+                        ℹ️ "Clonar Tal Cual" recrea la miniatura usando la original como referencia (imagen a imagen): queda muy parecida, no idéntica al píxel, porque la IA siempre varía algo. Para una copia exacta, usa "📥 Descargar Original HD" y edítale solo el texto.
+                    </div>
                 </div>
 
                 <!-- DESGLOSE DE PROMPTS PARA COPIAR -->
@@ -1519,6 +1522,35 @@
         let activeTranscriptText = "";
         let currentGeneratedImage = null;
         let originalDetectedPrompt = "";
+        // Miniatura original en base64 (vía /api/thumbnail-proxy), en caché por
+        // video: es la imagen de referencia para el clonado imagen-a-imagen.
+        // Sin ella, FLUX solo recibe texto y la "copia" sale inventada.
+        let currentOriginalThumbDataUrl = "";
+        let currentOriginalThumbVideoId = "";
+
+        // Devuelve la miniatura original como data-URL (base64). La pide al
+        // proxy del backend para evitar CORS; si el proxy falla, usa la URL
+        // directa de YouTube (maxres). Devuelve "" si no hay ninguna.
+        async function getOriginalThumbnailDataUrl() {
+            if (!currentSelectedVideo) return "";
+            const videoId = currentSelectedVideo.video_id;
+            if (currentOriginalThumbVideoId === videoId && currentOriginalThumbDataUrl) {
+                return currentOriginalThumbDataUrl;
+            }
+            let imgDataUrl = currentSelectedVideo.maxres_thumbnail_url || currentSelectedVideo.thumbnail_url || "";
+            try {
+                const proxyRes = await fetch(`/api/thumbnail-proxy?video_id=${videoId}`);
+                if (proxyRes.ok) {
+                    const pData = await proxyRes.json();
+                    if (pData.data_url) imgDataUrl = pData.data_url;
+                }
+            } catch (eProxy) {
+                console.warn("Proxy de miniatura no disponible, uso URL directa:", eProxy);
+            }
+            currentOriginalThumbDataUrl = imgDataUrl;
+            currentOriginalThumbVideoId = videoId;
+            return imgDataUrl;
+        }
 
         function restoreOriginalPrompt() {
             if (!originalDetectedPrompt) return;
@@ -1572,16 +1604,7 @@
             showToast("Analizando la imagen de la miniatura con Visión...");
 
             try {
-                let imgDataUrl = currentSelectedVideo.maxres_thumbnail_url || currentSelectedVideo.thumbnail_url;
-                try {
-                    const proxyRes = await fetch(`/api/thumbnail-proxy?video_id=${videoId}`);
-                    if (proxyRes.ok) {
-                        const pData = await proxyRes.json();
-                        if (pData.data_url) imgDataUrl = pData.data_url;
-                    }
-                } catch (eProxy) {
-                    console.warn("Proxy fallback to direct URL:", eProxy);
-                }
+                const imgDataUrl = await getOriginalThumbnailDataUrl();
 
                 const visionInstruction = "You are an expert viral YouTube thumbnail reverse-engineer and prompt engineer. Analyze this thumbnail image in depth. Return a precise, descriptive image prompt in English for FLUX.1 describing: 1. Main subject, clothing, facial expression, and pose. 2. The exact background environment and setting. 3. Lighting style (e.g. dramatic chiaroscuro, golden rim light, deep shadows) and color palette. 4. Composition and camera angle. Do NOT include text on the image or words. Return ONLY the English prompt, no conversational filler.";
 
@@ -1636,22 +1659,61 @@
             statusBox.style.background = 'rgba(59, 130, 246, 0.15)';
             statusBox.style.borderColor = '#3b82f6';
             statusBox.style.color = '#93c5fd';
-            statusBox.innerText = isExact 
-                ? "Clonando la miniatura original tal cual con FLUX.1 en 1280x720..."
+            statusBox.innerText = isExact
+                ? "Clonando la miniatura usando la original como referencia (imagen a imagen) en 1280x720..."
                 : "Renderizando tu miniatura modificada con FLUX.1 en 1280x720...";
 
             try {
-                const fullPrompt = promptText + ", 16:9 aspect ratio, youtube thumbnail, dramatic cinematic lighting, ultra detailed 8k photography, clean composition without text";
-                
                 let imgEl;
-                try {
-                    imgEl = await puter.ai.txt2img({
-                        prompt: fullPrompt,
-                        model: "black-forest-labs/FLUX.1-schnell"
-                    });
-                } catch (errModel) {
-                    console.warn("Reintentando con modelo por defecto de Puter:", errModel);
-                    imgEl = await puter.ai.txt2img(fullPrompt);
+                // CLONADO EXACTO: imagen a imagen. Antes se llamaba a FLUX.1
+                // Schnell solo con texto, y Schnell además RECHAZA imágenes de
+                // entrada (docs de Puter/Cloudflare), así que la "copia" salía
+                // inventada. Ahora se pasa la miniatura original como
+                // input_image a un modelo de edición (gpt-image-2 y, si falla,
+                // Nano Banana de Gemini), con ratio 16:9 para no deformarla
+                // al estirarla al canvas. Si no hay imagen de referencia o
+                // fallan los dos modelos, se cae al camino viejo de solo texto
+                // y se avisa: esa recreación NO quedará igual a la original.
+                let usedTextOnlyFallback = false;
+                if (isExact) {
+                    const refImage = await getOriginalThumbnailDataUrl();
+                    const editPrompt = "Recreate this exact YouTube thumbnail image as faithfully as possible from the input image: keep the same subject, face, facial expression, pose, clothing, background, composition, framing, lighting and color palette. Do not add, remove, move or restyle any element. Do not add any text. Details to preserve: " + promptText;
+                    const editModels = ["gpt-image-2", "gemini-nano-banana-2.1"];
+                    let lastErr = null;
+                    if (refImage) {
+                        for (const modelId of editModels) {
+                            try {
+                                imgEl = await puter.ai.txt2img({
+                                    prompt: editPrompt,
+                                    model: modelId,
+                                    input_image: refImage,
+                                    ratio: { w: 16, h: 9 }
+                                });
+                                if (imgEl && imgEl.src) break;
+                            } catch (errEdit) {
+                                console.warn(`Modelo de edición ${modelId} falló, probando el siguiente:`, errEdit);
+                                lastErr = errEdit;
+                                imgEl = null;
+                            }
+                        }
+                    }
+                    if (!imgEl || !imgEl.src) {
+                        console.warn("Clonado con referencia no disponible, cayendo a solo texto:", lastErr);
+                        usedTextOnlyFallback = true;
+                    }
+                }
+                if (!imgEl || !imgEl.src) {
+                    const fullPrompt = promptText + ", 16:9 aspect ratio, youtube thumbnail, dramatic cinematic lighting, ultra detailed 8k photography, clean composition without text";
+                    try {
+                        imgEl = await puter.ai.txt2img({
+                            prompt: fullPrompt,
+                            model: "black-forest-labs/FLUX.1-schnell"
+                        });
+                    } catch (errModel) {
+                        console.warn("Reintentando con modelo por defecto de Puter:", errModel);
+                        imgEl = await puter.ai.txt2img(fullPrompt);
+                    }
+                    if (isExact) usedTextOnlyFallback = true;
                 }
 
                 if (imgEl && imgEl.src) {
@@ -1661,13 +1723,17 @@
                         currentGeneratedImage = tempImg;
                         ctx.clearRect(0, 0, 1280, 720);
                         ctx.drawImage(tempImg, 0, 0, 1280, 720);
-                        
+
                         placeholder.style.display = 'none';
                         overlayBox.style.display = 'flex';
                         statusBox.style.display = 'none';
                         if (btnExact) btnExact.disabled = false;
                         if (btnMod) btnMod.disabled = false;
-                        showToast(isExact ? "¡Miniatura clonada fielmente!" : "¡Miniatura modificada con éxito!");
+                        if (isExact && usedTextOnlyFallback) {
+                            showToast("Clonado sin la imagen original como referencia: es solo una recreación por texto y no quedará igual. Reintenta en unos segundos.");
+                        } else {
+                            showToast(isExact ? "¡Miniatura clonada con la original como referencia!" : "¡Miniatura modificada con éxito!");
+                        }
 
                         const suggestedText = currentAdaptation?.thumbnail_cloner?.hook_text || "";
                         if (suggestedText) {
@@ -2054,6 +2120,15 @@
 
                 const elBadge = document.getElementById('vision-detected-badge');
                 if (elBadge) elBadge.style.display = 'none';
+
+                // Escaneo de Visión AUTOMÁTICO al abrir el modal: antes solo se
+                // hacía si el usuario pulsaba el botón a mano, así que "Clonar
+                // Tal Cual" usaba la plantilla genérica del backend y la copia
+                // no se parecía a la miniatura real. Si la Visión falla, se
+                // mantiene la plantilla como respaldo (scan... lo gestiona).
+                try { await scanThumbnailWithVision(); } catch (eScan) {
+                    console.warn("Escaneo automático de Visión no disponible:", eScan);
+                }
 
                 const elOverlay = document.getElementById('ai-overlay-text');
                 if (elOverlay) elOverlay.value = cloner.hook_text || '';
