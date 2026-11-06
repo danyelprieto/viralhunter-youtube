@@ -16,8 +16,10 @@ from youtube_transcript_api import YouTubeTranscriptApi
 # Forzar timeout global estricto para evitar bloqueos en servidores en la nube
 socket.setdefaulttimeout(3.0)
 
-# Caché en memoria de suscriptores para no repetir requests al mismo canal
-CHANNEL_SUBS_CACHE: Dict[str, int] = {}
+# Caché en memoria de suscriptores para no repetir requests al mismo canal.
+# El valor es None cuando YouTube no dejó verificar el número: nunca
+# inventar un número por defecto, porque eso falsifica el multiplicador.
+CHANNEL_SUBS_CACHE: Dict[str, Optional[int]] = {}
 
 # =========================================================================
 # CATÁLOGO DE NICHOS GANADORES EN TENDENCIA (Alto RPM & Potencial Arbitraje)
@@ -176,27 +178,46 @@ def parse_duration_text(text: str) -> float:
     return 0.0
 
 def parse_published_to_days(text: str) -> int:
+    """Convierte «3 weeks ago», «3w ago», «2mo ago», «8h ago»... a días.
+
+    YouTube/scrapetube devuelve casi siempre la forma abreviada
+    («3w ago», «2mo ago», «3d ago», «3y ago»), no la forma larga
+    («3 weeks ago»). La versión anterior solo entendía la forma larga,
+    así que casi todos los videos quedaban en 9999 y el filtro de fecha
+    (30d, 90d...) nunca filtraba nada. Devuelve 9999 solo si el texto
+    no se puede interpretar de ninguna forma.
+    """
     if not text:
         return 9999
-    t = text.lower()
-    m = re.search(r'(\d+)', t)
-    num = int(m.group(1)) if m else 1
-    
-    if any(k in t for k in ["hour", "hora", "minute", "minuto", "second", "segundo"]):
+    t = text.lower().strip()
+    # Quitar prefijos tipo "streamed", "premiered", "hace"
+    t = re.sub(r'^(streamed|premiered|hace)\s+', '', t)
+    m = re.search(r'(\d+(?:\.\d+)?)', t)
+    if not m:
+        return 9999
+    num = float(m.group(1))
+
+    # Orden importa: "mo" (meses) antes que "m" (minutos), "min" antes que "mo".
+    if re.search(r'\b\d+(?:\.\d+)?\s*(months?|mos?|mo|meses?|mes)\b', t):
+        return int(num * 30)
+    if re.search(r'\b\d+(?:\.\d+)?\s*(years?|yrs?|y|años?|anos?)\b', t):
+        return int(num * 365)
+    if re.search(r'\b\d+(?:\.\d+)?\s*(weeks?|w|semanas?)\b', t):
+        return int(num * 7)
+    if re.search(r'\b\d+(?:\.\d+)?\s*(days?|d|días?|dias?)\b', t):
+        return int(num)
+    if re.search(r'\b\d+(?:\.\d+)?\s*(hours?|hrs?|h|horas?)\b', t):
         return 0
-    elif any(k in t for k in ["day", "día", "dia"]):
-        return num
-    elif any(k in t for k in ["week", "semana"]):
-        return num * 7
-    elif any(k in t for k in ["month", "mes"]):
-        return num * 30
-    elif any(k in t for k in ["year", "año", "ano"]):
-        return num * 365
+    if re.search(r'\b\d+(?:\.\d+)?\s*(minutes?|mins?|min|minutos?)\b', t):
+        return 0
+    if re.search(r'\b\d+(?:\.\d+)?\s*(seconds?|secs?|s|segundos?)\b', t):
+        return 0
     return 9999
 
-def parse_subs_string(text: str) -> int:
+def parse_subs_string(text: str) -> Optional[int]:
+    """Convierte «1.2M», «850K»... a número. Devuelve None si no se puede leer."""
     if not text:
-        return 10000
+        return None
     t = text.upper().replace("SUSCRIPTORES", "").replace("SUBSCRIBERS", "").replace("SUBS", "").strip()
     try:
         if "M" in t:
@@ -208,14 +229,22 @@ def parse_subs_string(text: str) -> int:
             return int(num * 1_000)
         else:
             clean = "".join(c for c in t if c.isdigit())
-            return int(clean) if clean else 10000
+            return int(clean) if clean else None
     except Exception:
-        return 10000
+        return None
 
-def fetch_single_channel_subscribers(channel_handle_or_url: str) -> int:
-    """Extrae suscriptores reales de un canal forzando headers en inglés y formateando la URL."""
+def fetch_single_channel_subscribers(channel_handle_or_url: str) -> Optional[int]:
+    """Extrae suscriptores reales de un canal forzando headers en inglés.
+
+    Devuelve None cuando YouTube no deja leer el número (bloqueo,
+    consentimiento, timeout o formato nuevo). Antes devolvía 15.000
+    inventados, y ese número falso generaba todos los multiplicadores
+    (390x, 265x...) que se vieron en la app. Nunca inventar un número:
+    sin verificar no hay multiplicador. Se respeta el timeout de nube
+    de Omar (2.5 s, 128 KB, cookie SOCS).
+    """
     if not channel_handle_or_url:
-        return 10000
+        return None
 
     if channel_handle_or_url in CHANNEL_SUBS_CACHE:
         return CHANNEL_SUBS_CACHE[channel_handle_or_url]
@@ -243,25 +272,31 @@ def fetch_single_channel_subscribers(channel_handle_or_url: str) -> int:
         }
     )
 
-    subs = 15000
+    subs: Optional[int] = None
     try:
         with urllib.request.urlopen(req, timeout=2.5) as resp:
             # Leer solo los primeros 128 KB para no bloquear hilos en la nube
             html = resp.read(131072).decode('utf-8', errors='ignore')
-            m = re.search(r'([0-9\.,]+[KMBkmb]?)\s*(?:subscribers|suscriptores)', html, re.IGNORECASE)
-            if m:
-                subs = parse_subs_string(m.group(1))
-            else:
-                m2 = re.search(r'"subscriberCountText":\{"accessibility":\{"accessibilityData":\{"label":"([^"]+)"', html)
-                if m2:
-                    subs = parse_subs_string(m2.group(1))
+            patterns = [
+                r'([0-9\.,]+[KMBkmb]?)\s*(?:subscribers|suscriptores)',
+                r'"subscriberCountText":\{"accessibility":\{"accessibilityData":\{"label":"([^"]+)"',
+                r'"subscriberCount":"(\d+)"',
+                r'subscriberCountText[^0-9]*([0-9\.,]+[KMBkmb]?)',
+            ]
+            for pat in patterns:
+                m = re.search(pat, html, re.IGNORECASE)
+                if m:
+                    parsed = parse_subs_string(m.group(1))
+                    if parsed is not None:
+                        subs = parsed
+                        break
     except Exception:
-        subs = 15000
+        subs = None
 
     CHANNEL_SUBS_CACHE[channel_handle_or_url] = subs
     return subs
 
-def resolve_subscribers_in_parallel(channel_handles: List[str]) -> Dict[str, int]:
+def resolve_subscribers_in_parallel(channel_handles: List[str]) -> Dict[str, Optional[int]]:
     """Resuelve en paralelo los suscriptores de múltiples canales con ThreadPool acotado."""
     unique_handles = list(set(h for h in channel_handles if h))
     needed = [h for h in unique_handles if h not in CHANNEL_SUBS_CACHE][:8]
@@ -270,7 +305,7 @@ def resolve_subscribers_in_parallel(channel_handles: List[str]) -> Dict[str, int
         with ThreadPoolExecutor(max_workers=min(len(needed), 4)) as executor:
             executor.map(fetch_single_channel_subscribers, needed)
 
-    return {h: CHANNEL_SUBS_CACHE.get(h, 15000) for h in unique_handles}
+    return {h: CHANNEL_SUBS_CACHE.get(h) for h in unique_handles}
 
 def estimate_niche_rpm(keyword: str, title: str) -> float:
     combined = f"{keyword} {title}".lower()
@@ -404,6 +439,8 @@ def search_niche_outliers(
         return {
             "query": keyword,
             "count": 0,
+            "strict_count": 0,
+            "is_relaxed": False,
             "relaxed_notice": None,
             "results": []
         }
@@ -412,32 +449,47 @@ def search_niche_outliers(
     needed_handles = list(set(c["channel_handle"] for c in raw_candidates if c.get("channel_handle")))
     subs_map = resolve_subscribers_in_parallel(needed_handles)
 
-    # Construir lista completa con cálculos de multiplicadores
+    # Construir lista completa con cálculos de multiplicadores.
+    # Si los suscriptores no se pudieron verificar, NO hay multiplicador:
+    # multiplier=None, badge "SIN VERIFICAR" y subscribers_formatted
+    # "sin verificar". Mostrar un multiplicador inventado es peor que no
+    # mostrar ninguno.
     enriched_videos = []
     for item in raw_candidates:
         ch_handle = item["channel_handle"]
-        subs = subs_map.get(ch_handle, 15000)
+        subs = subs_map.get(ch_handle)
+        subs_verified = subs is not None and subs > 0
         views = item["views"]
         days_ago = item["days_ago"]
-        
-        multiplier = round(views / max(subs, 100), 1)
 
-        if multiplier >= 20.0:
-            badge = "🔥 MEGA OUTLIER"
-            badge_class = "badge-mega"
-        elif multiplier >= 5.0:
-            badge = "⚡ VIRAL"
-            badge_class = "badge-viral"
-        elif multiplier >= 1.5:
-            badge = "📈 TENDENCIA"
-            badge_class = "badge-trend"
+        if subs_verified:
+            multiplier = round(views / subs, 1)
+            if multiplier >= 20.0:
+                badge = "🔥 MEGA OUTLIER"
+                badge_class = "badge-mega"
+            elif multiplier >= 5.0:
+                badge = "⚡ VIRAL"
+                badge_class = "badge-viral"
+            elif multiplier >= 1.5:
+                badge = "📈 TENDENCIA"
+                badge_class = "badge-trend"
+            else:
+                badge = "⚪ REGULAR"
+                badge_class = "badge-regular"
         else:
-            badge = "⚪ REGULAR"
+            multiplier = None
+            badge = "❓ SIN VERIFICAR"
             badge_class = "badge-regular"
 
-        velocity_days = max(days_ago, 1)
-        views_per_day = int(views / velocity_days)
-        views_per_hour = round(views_per_day / 24.0, 1)
+        # Velocidad solo si la fecha es conocida; con days_ago=9999 no se
+        # puede calcular vistas/día y antes salía un número sin sentido.
+        if days_ago is not None and days_ago < 9999:
+            velocity_days = max(days_ago, 1)
+            views_per_day = int(views / velocity_days)
+            views_per_hour = round(views_per_day / 24.0, 1)
+        else:
+            views_per_day = 0
+            views_per_hour = 0.0
 
         rpm = estimate_niche_rpm(keyword, item["title"])
         earnings = round((views / 1000.0) * rpm, 2)
@@ -445,8 +497,9 @@ def search_niche_outliers(
         enriched_videos.append({
             **item,
             "views_formatted": f"{views:,}".replace(",", "."),
-            "subscribers": subs,
-            "subscribers_formatted": f"{subs:,}".replace(",", "."),
+            "subscribers": subs if subs_verified else 0,
+            "subscribers_formatted": f"{subs:,}".replace(",", ".") if subs_verified else "sin verificar",
+            "subscribers_verified": subs_verified,
             "multiplier": multiplier,
             "badge": badge,
             "badge_class": badge_class,
@@ -459,7 +512,10 @@ def search_niche_outliers(
             "estimated_earnings_formatted": f"${round(earnings):,} USD".replace(",", ".")
         })
 
-    # INTENTO 1: Filtrado estricto con los parámetros pedidos por el usuario
+    # INTENTO 1: Filtrado estricto con los parámetros pedidos por el usuario.
+    # Un video solo pasa si CUMPLE el filtro: fecha desconocida (9999) no
+    # pasa un filtro de fecha, y suscriptores sin verificar no pasan un
+    # filtro de suscriptores, porque no se puede comprobar que lo cumpla.
     filtered = []
     for v in enriched_videos:
         # Duración
@@ -475,33 +531,44 @@ def search_niche_outliers(
         # Fecha
         if v["days_ago"] > max_days:
             continue
-        # Suscriptores
-        if max_subscribers > 0 and v["subscribers"] > max_subscribers:
+        # Suscriptores: solo cuentan los verificados
+        if max_subscribers > 0 and (not v["subscribers_verified"] or v["subscribers"] > max_subscribers):
             continue
 
         filtered.append(v)
 
+    strict_count = len(filtered)
     relaxed_notice = None
+    is_relaxed = False
 
-    # INTENTO 2: Si el filtro estricto dio 0 resultados (ej: pedir 1M vistas en 30 días en canales chicos),
-    # aplicamos rescate inteligente para que Omar NUNCA vea una pantalla vacía, pero manteniendo canales chicos/medianos.
+    # INTENTO 2: Si el filtro estricto dio 0 resultados, rescate explícito.
+    # Antes el rescate se mezclaba con los resultados como si cumplieran
+    # los filtros. Ahora queda marcado: strict_count=0, is_relaxed=True,
+    # cada video lleva "relaxed": True y el aviso dice que NO cumplieron
+    # los filtros y que hay que revisar fecha y duración de cada uno.
     if len(filtered) == 0:
+        is_relaxed = True
         relaxed_notice = (
-            f"💡 Ajuste Inteligente: Ningún canal menor a {max_subscribers:,} subs alcanzó {min_views:,} vistas "
-            f"con esa duración y fecha en este nicho. Se muestran los mayores Outliers reales probados de este tema:"
+            f"💡 Ajuste Inteligente: 0 resultados cumplieron todos tus filtros "
+            f"(fecha, vistas, duración y suscriptores verificados) en este nicho. "
+            f"Se muestran videos de rescate de este tema, SIN aplicar esos filtros "
+            f"— revisa la duración y la fecha de cada uno:"
         )
         for v in enriched_videos:
-            # Siempre preservar el filtro anti-celebridad (descartar canales gigantes como MrBeast o Dude Perfect)
-            if max_subscribers > 0 and v["subscribers"] > max_subscribers:
-                continue
             if v["views"] >= 10000:
-                filtered.append(v)
+                rescued = dict(v)
+                rescued["relaxed"] = True
+                filtered.append(rescued)
 
-        # Si aún no hay suficientes, mantener canales chicos
+        # Si aún no hay suficientes, mantener canales chicos verificados
         if len(filtered) == 0:
-            filtered = [v for v in enriched_videos if (max_subscribers == 0 or v["subscribers"] <= max_subscribers)]
+            filtered = [
+                dict(v, relaxed=True) for v in enriched_videos
+                if v["subscribers_verified"] and (max_subscribers == 0 or v["subscribers"] <= max_subscribers)
+            ]
 
-    # Ordenamiento
+    # Ordenamiento: los multiplicadores sin verificar (None) van al final,
+    # nunca arriba por un número inventado.
     if sort_by == "velocity":
         filtered.sort(key=lambda x: x["views_per_day"], reverse=True)
     elif sort_by == "views":
@@ -509,11 +576,13 @@ def search_niche_outliers(
     elif sort_by == "date":
         filtered.sort(key=lambda x: x["days_ago"], reverse=False)
     else:  # "multiplier"
-        filtered.sort(key=lambda x: x["multiplier"], reverse=True)
+        filtered.sort(key=lambda x: (x["multiplier"] is not None, x["multiplier"] or 0), reverse=True)
 
     return {
         "query": keyword,
         "count": len(filtered[:limit]),
+        "strict_count": strict_count,
+        "is_relaxed": is_relaxed,
         "relaxed_notice": relaxed_notice,
         "results": filtered[:limit]
     }

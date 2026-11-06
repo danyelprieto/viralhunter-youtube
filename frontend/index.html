@@ -1874,7 +1874,7 @@
                 loading.style.display = 'none';
 
                 if (data.relaxed_notice) {
-                    status.innerHTML = `<div style="background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); color: #fde047; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.4;">${data.relaxed_notice}</div>`;
+                    status.innerHTML = `<div style="background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); color: #fde047; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.4;">${data.relaxed_notice} (${data.strict_count ?? 0} con tus filtros exactos)</div>`;
                 } else {
                     status.innerText = `Se encontraron ${currentVideos.length} videos anomalía para "${query}"`;
                 }
@@ -1910,11 +1910,17 @@
             videos.forEach((v, index) => {
                 const card = document.createElement('div');
                 card.className = 'video-card';
+                // Sin suscriptores verificados no hay multiplicador: no mostrar
+                // un número inventado. "sin verificar" en vez de "15.000 subs".
+                const badgeText = (v.multiplier === null || v.multiplier === undefined)
+                    ? `${v.badge}`
+                    : `${v.badge} (${v.multiplier}x)`;
+                const subsText = v.subscribers_verified ? `${v.subscribers_formatted} subs` : `subs sin verificar`;
 
                 card.innerHTML = `
                     <div class="thumb-box">
                         <span class="badge-outlier ${v.badge_class}">
-                            ${v.badge} (${v.multiplier}x)
+                            ${badgeText}
                         </span>
                         <img src="${v.thumbnail_url}" alt="${v.title}" class="thumb-img" loading="lazy">
                         <span class="badge-duration">${v.duration_text}</span>
@@ -1926,7 +1932,7 @@
                             
                             <div class="channel-row">
                                 <span class="channel-name" title="${v.channel_name}">👤 ${v.channel_name}</span>
-                                <span class="channel-subs">${v.subscribers_formatted} subs</span>
+                                <span class="channel-subs">${subsText}</span>
                             </div>
 
                             <div class="video-stats-grid">
@@ -1985,7 +1991,9 @@
 
             const elTitle = document.getElementById('modal-video-title');
             if (elTitle) {
-                elTitle.innerText = `Video: "${video.title}" | Canal: ${video.channel_name} (${video.subscribers_formatted} subs) | Multiplicador: ${video.multiplier}x`;
+                const multText = (video.multiplier === null || video.multiplier === undefined) ? 'sin verificar' : `${video.multiplier}x`;
+                const subsText = video.subscribers_verified ? `${video.subscribers_formatted} subs` : 'subs sin verificar';
+                elTitle.innerText = `Video: "${video.title}" | Canal: ${video.channel_name} (${subsText}) | Multiplicador: ${multText}`;
             }
 
             const elThumbImg = document.getElementById('m-thumb-img');
