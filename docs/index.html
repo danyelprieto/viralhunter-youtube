@@ -1771,12 +1771,27 @@
             showToast("Estilo añadido a la instrucción");
         }
 
+        // Llamada con límite de tiempo: las llamadas a Puter (chat con
+        // imagen, OCR) a veces no responden nunca y el botón se quedaba en
+        // "Escaneando..." para siempre (verificado en vivo: más de 5 min
+        // pegado, con el prompt genérico sin corregir). Con esto el escaneo
+        // completo nunca pasa de 90 s y el botón siempre vuelve a su estado.
+        function withTimeout(promise, ms, label) {
+            let timer;
+            const timeout = new Promise((_, reject) => {
+                timer = setTimeout(() => reject(new Error("Tiempo agotado: " + label)), ms);
+            });
+            return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+        }
+
         async function scanThumbnailWithVision() {
             if (!currentSelectedVideo) return;
             const videoId = currentSelectedVideo.video_id;
             const btn = document.getElementById('btn-scan-vision');
             const input = document.getElementById('ai-prompt-input');
             const badge = document.getElementById('vision-detected-badge');
+            const scanDeadline = Date.now() + 90000; // todo el escaneo, máx. 90 s
+            const timeLeft = () => Math.max(5000, scanDeadline - Date.now());
 
             if (btn) {
                 btn.disabled = true;
@@ -1791,17 +1806,34 @@
 
                 let promptResult = "";
                 if (window.puter && puter.ai) {
-                    const resp = await puter.ai.chat(visionInstruction, imgDataUrl, { model: 'gpt-4o' });
+                    const resp = await withTimeout(puter.ai.chat(visionInstruction, imgDataUrl, { model: 'gpt-4o' }), timeLeft(), "escaneo con Visión");
                     promptResult = (typeof resp === 'string') ? resp : (resp?.message?.content || resp?.text || "");
                 }
 
                 if (promptResult && promptResult.length > 20) {
                     originalDetectedPrompt = promptResult.trim();
                     if (input) input.value = originalDetectedPrompt;
-                    if (badge) badge.style.display = 'inline-flex';
+                    if (badge) {
+                        badge.textContent = "✅ Visión IA Activa";
+                        badge.style.background = 'rgba(16, 185, 129, 0.2)';
+                        badge.style.color = '#34d399';
+                        badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                        badge.style.display = 'inline-flex';
+                    }
                     showToast("¡Prompt real extraído con Visión IA!");
                 } else {
-                    showToast("Escaneo completado. Prompt listo.");
+                    // Sin descripción real, la caja muestra la plantilla
+                    // genérica del backend, que INVENTA contenido (un
+                    // gobernante, una sala de guerra...) que no está en la
+                    // miniatura. Avisarlo en vez de dejarlo pasar por real.
+                    if (badge) {
+                        badge.textContent = "⚠️ Visión no respondió — prompt genérico, no describe la miniatura real";
+                        badge.style.background = 'rgba(245, 158, 11, 0.2)';
+                        badge.style.color = '#fbbf24';
+                        badge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+                        badge.style.display = 'inline-flex';
+                    }
+                    showToast("Visión no respondió a tiempo: se usa el prompt genérico. Puedes re-escanear.");
                 }
 
                 // Capturar el texto REAL de la miniatura original (el título
@@ -1812,11 +1844,11 @@
                 try {
                     let ocrText = "";
                     if (window.puter && puter.ai && puter.ai.img2txt) {
-                        const ocrResp = await puter.ai.img2txt(imgDataUrl);
+                        const ocrResp = await withTimeout(puter.ai.img2txt(imgDataUrl), timeLeft(), "lectura del texto (OCR)");
                         ocrText = (typeof ocrResp === 'string') ? ocrResp : (ocrResp?.text || "");
                     }
                     if (!ocrText || ocrText.trim().length < 2) {
-                        const textResp = await puter.ai.chat("Transcribe exactly the text written on this thumbnail image, preserving the original language (Spanish). Return ONLY the text, no explanation.", imgDataUrl, { model: 'gpt-4o' });
+                        const textResp = await withTimeout(puter.ai.chat("Transcribe exactly the text written on this thumbnail image, preserving the original language (Spanish). Return ONLY the text, no explanation.", imgDataUrl, { model: 'gpt-4o' }), timeLeft(), "lectura del texto con Visión");
                         ocrText = (typeof textResp === 'string') ? textResp : (textResp?.message?.content || textResp?.text || "");
                     }
                     ocrText = (ocrText || "").replace(/\s+/g, " ").trim();
@@ -1827,10 +1859,10 @@
                         // devuelve tal cual. Si la traducción falla, se usa el
                         // texto capturado sin traducir.
                         try {
-                            const trResp = await puter.ai.chat(
+                            const trResp = await withTimeout(puter.ai.chat(
                                 "Translate this YouTube thumbnail title text to Spanish. Keep it short, punchy and viral, in the style of a YouTube thumbnail (few words, high impact). If it is already in Spanish, return it unchanged. Return ONLY the translated text, no explanation. Text: \"" + ocrText.replace(/"/g, "'") + "\"",
                                 { model: 'gpt-4o' }
-                            );
+                            ), timeLeft(), "traducción del título");
                             const trText = (typeof trResp === 'string') ? trResp : (trResp?.message?.content || trResp?.text || "");
                             if (trText && trText.trim()) ocrText = trText.replace(/\s+/g, " ").trim();
                         } catch (eTr) {
