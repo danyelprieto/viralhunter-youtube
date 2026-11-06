@@ -1,0 +1,2668 @@
+<!-- Copia publicada de ../frontend/index.html para GitHub Pages (Source: main /docs). No editar aquí: el original vive en frontend/index.html; al cambiarlo, copiarlo a docs/index.html. -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ViralHunter 2.0 · Buscador de Outliers, Clonador de Miniaturas y Nichos de YouTube</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        :root {
+            --bg-deep: #07090e;
+            --bg-card: #0f172a;
+            --bg-card-hover: #1e293b;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-active: #3b82f6;
+            --yt-red: #ff0033;
+            --accent-cyan: #00f5ff;
+            --accent-yellow: #facc15;
+            --accent-emerald: #10b981;
+            --accent-purple: #a855f7;
+            --text-pure: #ffffff;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-pure);
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+
+        /* HEADER */
+        header {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(7, 9, 14, 0.98) 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 28px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(16px);
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            background: linear-gradient(135deg, #ff0033 0%, #e11d48 100%);
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 0 20px rgba(255, 0, 51, 0.35);
+        }
+
+        .brand-title {
+            font-size: 19px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-tagline {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* NAVEGACIÓN POR PESTAÑAS */
+        .nav-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            padding: 4px;
+            border-radius: 14px;
+            gap: 4px;
+        }
+
+        .nav-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            padding: 8px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .nav-btn.active {
+            background: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+        }
+
+        /* MAIN WRAPPER */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 26px 20px;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        /* BANNER TITULAR */
+        .section-header {
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* VISTA 1: EXPLORADOR DE NICHOS */
+        .niche-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .niche-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .niche-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 12px 30px rgba(0, 245, 255, 0.12);
+        }
+
+        .niche-top {
+            margin-bottom: 14px;
+        }
+
+        .niche-category {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+
+        .niche-name {
+            font-size: 17px;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.3;
+            margin-bottom: 8px;
+        }
+
+        .niche-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+
+        .niche-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 12px;
+            margin: 16px 0;
+        }
+
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .metric-val {
+            font-size: 14px;
+            font-weight: 800;
+            margin-top: 2px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .val-rpm { color: var(--accent-emerald); }
+        .val-mult { color: var(--accent-yellow); }
+        .val-comp { color: var(--accent-cyan); }
+        .val-sat { color: #f43f5e; }
+
+        .btn-load-niche {
+            width: 100%;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-load-niche:hover {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+        }
+
+        /* VISTA 2: PANEL DE BÚSQUEDA Y FILTROS */
+        .search-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 22px;
+            margin-bottom: 26px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+
+        .search-bar-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 15px 20px;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 600;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-cyan);
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 0 16px rgba(0, 245, 255, 0.2);
+        }
+
+        .btn-execute-search {
+            background: linear-gradient(135deg, #ff0033 0%, #e11d48 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 14px;
+            padding: 15px 28px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-execute-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 0, 51, 0.4);
+        }
+
+        /* MATRIZ DE FILTROS MULTI-VARIABLE */
+        .filter-matrix {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: #ffffff;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+
+        .filter-select:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        .filter-select option {
+            background: #0f172a;
+            color: #ffffff;
+        }
+
+        /* BARRA DE RESULTADOS Y STATUS */
+        .results-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .results-count-text {
+            font-size: 15px;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .rule-badge {
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(250, 204, 21, 0.1);
+            color: var(--accent-yellow);
+            border: 1px solid rgba(250, 204, 21, 0.2);
+            padding: 6px 14px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* GRID DE TARJETAS DE VIDEOS OUTLIERS */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 24px;
+        }
+
+        .video-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .video-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+        }
+
+        .thumb-box {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 */
+            background: #000;
+            overflow: hidden;
+        }
+
+        .thumb-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .video-card:hover .thumb-img {
+            transform: scale(1.04);
+        }
+
+        .badge-outlier {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            z-index: 2;
+            backdrop-filter: blur(8px);
+        }
+
+        .badge-mega {
+            background: rgba(239, 68, 68, 0.9);
+            color: #ffffff;
+            box-shadow: 0 0 14px rgba(239, 68, 68, 0.6);
+            border: 1px solid #ff7878;
+        }
+
+        .badge-viral {
+            background: rgba(234, 179, 8, 0.9);
+            color: #000000;
+            box-shadow: 0 0 14px rgba(234, 179, 8, 0.5);
+            border: 1px solid #fef08a;
+        }
+
+        .badge-trend {
+            background: rgba(16, 185, 129, 0.9);
+            color: #ffffff;
+            border: 1px solid #6ee7b7;
+        }
+
+        .badge-regular {
+            background: rgba(100, 116, 139, 0.8);
+            color: #ffffff;
+        }
+
+        .badge-duration {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            z-index: 2;
+        }
+
+        .card-content {
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            justify-content: space-between;
+        }
+
+        .video-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .channel-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 10px;
+        }
+
+        .channel-name {
+            font-weight: 600;
+            color: #cbd5e1;
+            max-width: 60%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .channel-subs {
+            background: rgba(255, 255, 255, 0.06);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+        }
+
+        /* METRICAS DEL VIDEO (VISTAS, VELOCIDAD, GANANCIAS) */
+        .video-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+        }
+
+        .stat-block {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: var(--text-dim);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 13px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 2px;
+        }
+
+        .val-views { color: #60a5fa; }
+        .val-velocity { color: var(--accent-yellow); }
+        .val-earnings { color: var(--accent-emerald); }
+        .val-rpm-tag { color: var(--accent-cyan); }
+
+        /* ACCIONES DE LA TARJETA */
+        .card-actions-grid {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-action-cloner {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+            color: #ffffff;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action-cloner:hover {
+            box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn-action-icon {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: #ffffff;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn-action-icon:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #ffffff;
+        }
+
+        /* MODALES */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .modal-card {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+            position: relative;
+            padding: 30px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 16px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: #ffffff;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .modal-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding-bottom: 8px;
+        }
+
+        .modal-tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        .modal-tab-btn.active {
+            background: #3b82f6;
+            color: #ffffff;
+        }
+
+        /* SECCIONES DEL MODAL */
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .thumb-studio-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 22px;
+        }
+
+        @media (max-width: 768px) {
+            .thumb-studio-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .studio-column {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .studio-col-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-canvas-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 */
+            background: #000;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .ai-canvas-wrapper canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .ai-canvas-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .style-chips-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+            margin-bottom: 10px;
+        }
+
+        .style-chip {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: #cbd5e1;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .style-chip:hover {
+            background: rgba(59, 130, 246, 0.25);
+            border-color: #3b82f6;
+            color: #ffffff;
+        }
+
+        .overlay-tools-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .overlay-inputs-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .thumb-preview-box {
+            position: relative;
+            width: 100%;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .thumb-preview-img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .thumb-tools-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn-download-thumb {
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-open-photopea {
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .info-card-block {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .info-block-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .btn-copy-code {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .code-display {
+            background: #07090e;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #e2e8f0;
+            line-height: 1.5;
+            word-break: break-all;
+        }
+
+        /* TOAST DE CONFIRMACIÓN */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #10b981;
+            color: #ffffff;
+            padding: 14px 22px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 200;
+        }
+
+        /* LOADING SPINNER */
+        .loading-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            display: none;
+        }
+
+        .spinner {
+            width: 44px;
+            height: 44px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="header-container">
+            <div class="brand">
+                <div class="brand-icon">🔥</div>
+                <div>
+                    <div class="brand-title">VIRALHUNTER 2.0</div>
+                    <div class="brand-tagline">Motor de Outliers, Arbitraje de Mercado & Clonación de Packaging</div>
+                </div>
+            </div>
+
+            <!-- NAVEGACIÓN -->
+            <div class="nav-tabs">
+                <button class="nav-btn active" onclick="switchMainView('view-niches', this)">
+                    🎯 Explorador de Nichos
+                </button>
+                <button class="nav-btn" onclick="switchMainView('view-search', this)">
+                    🔍 Buscador & Filtros
+                </button>
+                <button class="nav-btn" onclick="switchMainView('view-favorites', this)">
+                    ⭐ Guardados en Obsidian
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- ========================================================================= -->
+        <!-- VISTA 1: EXPLORADOR DE NICHOS GANADORES (El sistema encuentra por ti) -->
+        <!-- ========================================================================= -->
+        <section id="view-niches" class="view-section active">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">🎯 Nichos con Mayor Potencial de Arbitraje</h2>
+                    <p class="section-subtitle">
+                        Selecciona un nicho analizado para cargar instantáneamente videos outliers en inglés listos para adaptar al español.
+                    </p>
+                </div>
+                <div class="rule-badge">
+                    ⚡ Estrategia: Nichos con RPM > $5 USD y Baja Saturación
+                </div>
+            </div>
+
+            <div id="niches-container" class="niche-grid">
+                <!-- Se rellena dinámicamente con /api/niches -->
+            </div>
+        </section>
+
+        <!-- ========================================================================= -->
+        <!-- VISTA 2: BUSCADOR & FILTROS AVANZADOS DE OUTLIERS -->
+        <!-- ========================================================================= -->
+        <section id="view-search" class="view-section">
+            
+            <div class="search-panel">
+                <div class="search-bar-row">
+                    <input 
+                        type="text" 
+                        id="input-query" 
+                        class="search-input" 
+                        placeholder="Escribe un tema o nicho en inglés (ej: the man who tricked history documentary, stoic rules of silence...)"
+                        value="the man who tricked history documentary"
+                        onkeydown="if(event.key === 'Enter') triggerSearch()"
+                    >
+                    <button onclick="triggerSearch()" class="btn-execute-search">
+                        <span>🚀 Buscar Outliers</span>
+                    </button>
+                </div>
+
+                <!-- MATRIZ DE FILTROS MULTI-VARIABLE (TIEMPO, VISITAS, DURACIÓN, SUSCRIPTORES, RPM) -->
+                <div class="filter-matrix">
+                    
+                    <!-- 1. TIEMPO DE PUBLICACIÓN -->
+                    <div class="filter-group">
+                        <label>📅 Tiempo de Publicación:</label>
+                        <select id="filter-date" class="filter-select" onchange="triggerSearch()">
+                            <option value="all">Cualquier fecha</option>
+                            <option value="24h">Últimas 24 horas</option>
+                            <option value="7d">Últimos 7 días</option>
+                            <option value="30d">Últimos 30 días (Mes)</option>
+                            <option value="90d">Últimos 90 días (3 Meses)</option>
+                            <option value="365d" selected>Último año</option>
+                        </select>
+                    </div>
+
+                    <!-- 2. VISITAS MÍNIMAS -->
+                    <div class="filter-group">
+                        <label>👁 Visitas Mínimas:</label>
+                        <select id="filter-views" class="filter-select" onchange="triggerSearch()">
+                            <option value="5000">+5.000 vistas</option>
+                            <option value="25000">+25.000 vistas</option>
+                            <option value="50000" selected>+50.000 vistas</option>
+                            <option value="100000">+100.000 vistas</option>
+                            <option value="250000">+250.000 vistas</option>
+                            <option value="500000">+500.000 vistas</option>
+                            <option value="1000000">+1.000.000 vistas</option>
+                        </select>
+                    </div>
+
+                    <!-- 3. TAMAÑO DEL VIDEO / DURACIÓN -->
+                    <div class="filter-group">
+                        <label>⏱ Duración del Video:</label>
+                        <select id="filter-duration" class="filter-select" onchange="triggerSearch()">
+                            <option value="0">Cualquier duración</option>
+                            <option value="8">+8 min (Apto Midrolls)</option>
+                            <option value="15" selected>+15 min (Alta Retención)</option>
+                            <option value="20">+20 min (Documental Largo)</option>
+                            <option value="30">+30 min (Macro-análisis)</option>
+                        </select>
+                    </div>
+
+                    <!-- 4. TOPE DE SUSCRIPTORES (ANTI-CELEBRIDAD) -->
+                    <div class="filter-group">
+                        <label>👤 Tope de Suscriptores:</label>
+                        <select id="filter-subs" class="filter-select" onchange="triggerSearch()">
+                            <option value="50000">Menos de 50.000 subs</option>
+                            <option value="150000">Menos de 150.000 subs</option>
+                            <option value="250000" selected>Menos de 250.000 subs (Recomendado)</option>
+                            <option value="500000">Menos de 500.000 subs</option>
+                            <option value="0">Sin tope de subs</option>
+                        </select>
+                    </div>
+
+                    <!-- 5. ORDENAMIENTO -->
+                    <div class="filter-group">
+                        <label>⚡ Ordenar Resultados Por:</label>
+                        <select id="filter-sort" class="filter-select" onchange="triggerSearch()">
+                            <option value="multiplier" selected>🔥 Mayor Multiplicador (Outlier)</option>
+                            <option value="velocity">🚀 Mayor Velocidad (Vistas/Día)</option>
+                            <option value="views">👁 Más Vistas Totales</option>
+                            <option value="date">📅 Más Recientes Primero</option>
+                        </select>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- RESULTADOS HEADER -->
+            <div class="results-bar">
+                <div id="results-status" class="results-count-text">
+                    Explora un nicho o realiza una búsqueda para ver videos anomalía.
+                </div>
+                <div class="rule-badge">
+                    💡 Outlier = Vistas / Suscriptores. A mayor multiplicador, mejor empaquetado.
+                </div>
+            </div>
+
+            <!-- LOADING SPINNER -->
+            <div id="loading" class="loading-state">
+                <div class="spinner"></div>
+                <div style="font-weight: 700; color: #fff;">Escaneando YouTube en tiempo real...</div>
+                <div style="font-size: 13px; margin-top: 4px;">Calculando suscriptores reales, velocidad de exposición y multiplicadores.</div>
+            </div>
+
+            <!-- GRID DE VIDEOS -->
+            <div id="video-grid" class="video-grid">
+                <!-- Se llena dinámicamente con JavaScript -->
+            </div>
+
+        </section>
+
+        <!-- ========================================================================= -->
+        <!-- VISTA 3: GUARDADOS EN OBSIDIAN -->
+        <!-- ========================================================================= -->
+        <section id="view-favorites" class="view-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">⭐ Videos Registrados en tu Bóveda</h2>
+                    <p class="section-subtitle">
+                        Archivados automáticamente en <code>vaul\buscar nicho\05 - Registro de Nichos y Canales Ganadores.md</code>
+                    </p>
+                </div>
+                <button onclick="loadFavorites()" class="btn-execute-search" style="padding: 10px 18px;">
+                    🔄 Recargar Bóveda
+                </button>
+            </div>
+
+            <div id="favorites-grid" class="video-grid">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 1: CLONACIÓN DE MINIATURA, ADAPTACIÓN Y MONETIZACIÓN -->
+    <!-- ========================================================================= -->
+    <div id="modal-cloner" class="modal-overlay" onclick="if(event.target === this) closeModal('modal-cloner')">
+        <div class="modal-card">
+            
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title">🎨 Laboratorio de Clonación y Empaquetado</div>
+                    <div id="modal-video-title" style="font-size: 13px; color: var(--text-muted); margin-top: 4px;"></div>
+                </div>
+                <button onclick="closeModal('modal-cloner')" class="modal-close">✕</button>
+            </div>
+
+            <!-- TABS DEL MODAL -->
+            <div class="modal-tabs">
+                <button class="modal-tab-btn active" onclick="switchModalTab('mtab-thumb', this)">
+                    🖼 Clonador de Miniatura
+                </button>
+                <button class="modal-tab-btn" onclick="switchModalTab('mtab-adaptation', this)">
+                    ⚡ Títulos y Gancho (Español)
+                </button>
+                <button class="modal-tab-btn" onclick="switchModalTab('mtab-monetization', this)">
+                    💰 Escaleta & RPM (20 Min)
+                </button>
+                <button class="modal-tab-btn" onclick="switchModalTab('mtab-videoprod', this)">
+                    🎬 Producción de Video (IA)
+                </button>
+            </div>
+
+            <!-- SUB-PESTAÑA 1: CLONADOR Y ESTUDIO DE MINIATURAS CON IA -->
+            <div id="mtab-thumb" class="tab-panel active">
+                
+                <div class="thumb-studio-grid">
+                    
+                    <!-- COLUMNA 1: ORIGINAL DE YOUTUBE -->
+                    <div class="studio-column">
+                        <div class="studio-col-title">
+                            <span>👁 Miniatura Original (Referencia)</span>
+                        </div>
+                        <div class="thumb-preview-box">
+                            <img id="m-thumb-img" src="" alt="Miniatura Original" class="thumb-preview-img">
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <a id="btn-download-thumb-hd" href="#" target="_blank" download="miniatura_original.jpg" class="btn-download-thumb" style="font-size: 11px; padding: 8px 12px;">
+                                📥 Descargar Original HD
+                            </a>
+                            <button id="btn-scan-vision" onclick="scanThumbnailWithVision()" class="btn-open-photopea" style="font-size: 11px; padding: 8px 12px; background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; color: #93c5fd;">
+                                👁️ Escanear con Visión IA
+                            </button>
+                            <a href="https://www.photopea.com" target="_blank" class="btn-open-photopea" style="font-size: 11px; padding: 8px 12px;">
+                                🖌 Photopea
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- COLUMNA 2: ESTUDIO DE GENERACIÓN Y EDICIÓN CON IA -->
+                    <div class="studio-column">
+                        <div class="studio-col-title">
+                            <span>✨ Nueva Miniatura con IA (FLUX.1)</span>
+                        </div>
+
+                        <div class="ai-canvas-wrapper">
+                            <canvas id="canvas-ai-thumb" width="1280" height="720"></canvas>
+                            <div id="ai-thumb-placeholder" class="ai-canvas-placeholder">
+                                <div style="font-size: 36px; margin-bottom: 8px;">🎨</div>
+                                <div style="font-weight: 700; color: #fff; font-size: 14px;">Miniatura Recreada por IA</div>
+                                <div style="font-size: 12px; margin-top: 4px; max-width: 280px;">Pulsa "Clonar Tal Cual" para ver cómo queda fiel a la original, o cámbiale cosas por texto abajo.</div>
+                            </div>
+                        </div>
+
+                        <!-- ESTADO DE GENERACIÓN -->
+                        <div id="ai-gen-status" style="display: none; background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6; color: #93c5fd; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; text-align: center;">
+                            ⏳ Generando miniatura en 1280x720 con FLUX.1...
+                        </div>
+
+                        <!-- HERRAMIENTAS DE TEXTO VIRAL (OVERLAY) -->
+                        <div id="ai-overlay-box" class="overlay-tools-box" style="display: none;">
+                            <div style="font-size: 11px; font-weight: 800; color: var(--accent-yellow); text-transform: uppercase;">
+                                🖋️ Agregar Texto Viral a la Miniatura:
+                            </div>
+                            <div class="overlay-inputs-row">
+                                <input id="ai-overlay-text" type="text" class="search-input" style="padding: 8px 12px; font-size: 13px; font-weight: 800;" placeholder="Texto (ej: CALLA Y OBSERVA)">
+                                <select id="ai-text-color" class="filter-select" style="padding: 8px 10px; font-size: 12px;">
+                                    <option value="#FACC15">🟡 Amarillo</option>
+                                    <option value="#EF4444">🔴 Rojo</option>
+                                    <option value="#FFFFFF">⚪ Blanco</option>
+                                    <option value="#00F5FF">🔵 Cian</option>
+                                </select>
+                                <select id="ai-text-pos" class="filter-select" style="padding: 8px 10px; font-size: 12px;">
+                                    <option value="bottom">Abajo</option>
+                                    <option value="center">Centro</option>
+                                    <option value="top">Arriba</option>
+                                </select>
+                                <button onclick="applyOverlayText()" class="btn-execute-search" style="padding: 8px 14px; font-size: 12px;">
+                                    Aplicar
+                                </button>
+                            </div>
+                            
+                            <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                <button onclick="downloadGeneratedThumbnail()" class="btn-download-thumb" style="flex: 1; font-size: 12px; justify-content: center;">
+                                    📥 Descargar Miniatura Lista (.jpg)
+                                </button>
+                                <button onclick="saveGeneratedThumbToObsidian()" class="btn-open-photopea" style="background: #10b981; font-size: 12px; justify-content: center;">
+                                    ⭐ Guardar en Obsidian
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- CAJA DE INSTRUCCIONES PARA LA IA -->
+                <div class="info-card-block">
+                    <div class="info-block-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>💬 Prompt Real de la Miniatura (Editable por Texto):</span>
+                            <span id="vision-detected-badge" style="display: none; background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.4);">
+                                ✅ Visión IA Activa
+                            </span>
+                        </div>
+                        <button onclick="restoreOriginalPrompt()" class="btn-copy-code" style="font-size: 11px;">
+                            🔄 Restaurar Original
+                        </button>
+                    </div>
+
+                    <textarea id="ai-prompt-input" rows="3" class="search-input" style="width: 100%; border-radius: 10px; padding: 12px; font-size: 13px; line-height: 1.5;" placeholder="Aquí aparece el prompt real de la miniatura seleccionada. Modifica cualquier palabra para cambiar personaje, escenario, colores..."></textarea>
+
+                    <!-- CHIPS DE MODIFICACIÓN RÁPIDA POR TEXTO -->
+                    <div style="margin-top: 10px;">
+                        <div style="font-size: 11px; color: var(--text-dim); font-weight: 700; margin-bottom: 6px;">
+                            ⚡ Modificar por texto con 1 clic:
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <button onclick="replaceSubjectPrompt('weathered Roman philosopher marble statue with golden cracks')" class="style-chip">🏛️ Busto Romano / Estoico</button>
+                            <button onclick="replaceSubjectPrompt('intense medieval knight in battle-damaged dark plate armor')" class="style-chip">⚔️ Caballero Medieval</button>
+                            <button onclick="replaceSubjectPrompt('modern sharp confident woman in black leather jacket, rim lighting')" class="style-chip">👤 Mujer Moderna</button>
+                            <button onclick="replaceSubjectPrompt('young ambitious tech founder in dark studio with holographic data')" class="style-chip">💻 Empresario / Tech</button>
+                            <button onclick="appendStylePrompt('Renaissance oil painting style, dramatic candlelight, rich dark shadows')" class="style-chip">📜 Óleo Renacentista</button>
+                            <button onclick="appendStylePrompt('hyperrealistic 3D Octane render, glowing bio-luminescence, 8k')" class="style-chip">🧠 3D / Sci-Fi</button>
+                            <button onclick="convertToCleanBackground()" class="style-chip" style="border-color: #38bdf8; color: #7dd3fc;">🌌 Solo Fondo Limpio (Sin Persona)</button>
+                            <button onclick="appendStylePrompt('extreme high contrast chiaroscuro, volumetric dramatic rim lighting')" class="style-chip">⚡ Más Contraste & Luz</button>
+                        </div>
+                    </div>
+
+                    <!-- BOTONES DE ACCIÓN: CLONAR TAL CUAL VS REGENERAR -->
+                    <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <button id="btn-clone-exact" onclick="generateThumbnailWithAI(true)" class="btn-action-cloner" style="justify-content: center; font-size: 14px; padding: 13px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
+                            <span>🎯 Clonar Tal Cual (Fiel a la Original)</span>
+                        </button>
+                        <button id="btn-generate-ai-thumb" onclick="generateThumbnailWithAI(false)" class="btn-execute-search" style="justify-content: center; font-size: 14px; padding: 13px;">
+                            <span>🎨 Solo cambiar colores (variación sutil)</span>
+                        </button>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 11px; color: var(--text-dim); line-height: 1.5;">
+                        ℹ️ "Clonar Tal Cual" recrea la miniatura usando la original como referencia (imagen a imagen) con el modelo gratuito de Cloudflare y el prompt completo: descripción visual + sujeto + fondo + paleta + dirección de arte + título del video + texto en español. Queda muy parecida, no idéntica al píxel. "Solo cambiar colores" deja la misma miniatura y le combina varios cambios sutiles a la vez (color + luz + tono), y sale SIN título; si la IA no responde, el cambio de color se aplica directo en tu navegador, sin gastar saldo. El texto largo ya no se corta: se achica y se parte en líneas. Para una copia exacta, usa "📥 Descargar Original HD" y edítale solo el texto.
+                    </div>
+                </div>
+
+                <!-- DESGLOSE DE PROMPTS PARA COPIAR -->
+                <div class="info-card-block">
+                    <div class="info-block-title">
+                        <span>🤖 Prompt Completo para Midjourney / Flux (Opcional):</span>
+                        <button onclick="copyElementText('m-thumb-midjourney', 'Prompt copiado')" class="btn-copy-code">📋 Copiar Prompt</button>
+                    </div>
+                    <div id="m-thumb-midjourney" class="code-display"></div>
+                </div>
+
+                <div class="info-card-block">
+                    <div class="info-block-title">🎨 Dirección de Arte y Composición:</div>
+                    <div id="m-thumb-direction" style="font-size: 13px; color: #cbd5e1; line-height: 1.6; white-space: pre-line;"></div>
+                </div>
+
+            </div>
+
+            <!-- SUB-PESTAÑA 2: TÍTULOS Y GANCHO EN ESPAÑOL -->
+            <div id="mtab-adaptation" class="tab-panel">
+                
+                <!-- AUDITOR DE EMPAQUETADO (LINTER TÍTULO + MINIATURA DE YT-PACKAGE) -->
+                <div class="info-card-block" style="border: 1px solid rgba(59, 130, 246, 0.3); background: rgba(15, 23, 42, 0.6);">
+                    <div class="info-block-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #60a5fa;">🛡️ Auditor de Empaquetado (Título + Miniatura):</span>
+                        <span id="pkg-audit-score" class="badge-outlier" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 11px;">
+                            Score: 88/100
+                        </span>
+                    </div>
+
+                    <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px 14px; margin-top: 8px; font-size: 12px;">
+                        <div style="color: var(--text-muted); font-size: 11px; font-weight: 700; margin-bottom: 4px;">
+                            📱 Vista previa en feed móvil (cortado a ~40 caracteres):
+                        </div>
+                        <div id="pkg-mobile-preview" style="color: #facc15; font-weight: 800; font-family: monospace; font-size: 13px;">
+                            Cargando vista previa...
+                        </div>
+                    </div>
+
+                    <div id="pkg-audit-details" style="margin-top: 10px; font-size: 12px; display: flex; flex-direction: column; gap: 4px;">
+                        <!-- Se llena dinámicamente con checks y warnings -->
+                    </div>
+                </div>
+
+                <!-- TÍTULOS SUGERIDOS -->
+                <div class="info-card-block">
+                    <div class="info-block-title">🔥 3 Títulos Psicológicos de Alto CTR (Español):</div>
+                    <div id="m-titles-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                </div>
+
+                <!-- 3 GANCHOS PROBADOS CON FÓRMULAS DE HOOKS.JSON -->
+                <div class="info-card-block">
+                    <div class="info-block-title">
+                        <span>🎙️ 3 Ganchos Virales Probados (15s) con Puntuación de Retención:</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
+                        Fórmulas de retención de <i>youtube-agent-skill</i>: confirman el título en los primeros 5s, tienen una sola promesa y evitan los saludos que espantan al público.
+                    </div>
+                    <div id="m-proven-hooks-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                </div>
+
+            </div>
+
+            <!-- SUB-PESTAÑA 3: ESCALETA Y RPM -->
+            <div id="mtab-monetization" class="tab-panel">
+                
+                <div class="info-card-block">
+                    <div class="info-block-title">💰 Estrategia de Monetización & Pausas Midrolls:</div>
+                    <div id="m-monetization-desc" style="font-size: 13px; color: #a7f3d0; line-height: 1.5;"></div>
+                </div>
+
+                <div class="info-card-block">
+                    <div class="info-block-title">⏱ Estructura Minuto a Minuto para 20 Minutos:</div>
+                    <ul id="m-outline-list" style="list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #cbd5e1;"></ul>
+                </div>
+
+            </div>
+
+            <!-- SUB-PESTAÑA 4: PROMPTS DE PRODUCCIÓN DE VIDEO COMPLETO (IA) -->
+            <div id="mtab-videoprod" class="tab-panel">
+                
+                <!-- HERRAMIENTAS RECOMENDADAS -->
+                <div class="info-card-block" style="border: 1px solid rgba(168, 85, 247, 0.3); background: rgba(88, 28, 135, 0.1);">
+                    <div class="info-block-title" style="color: #c084fc;">
+                        <span>🚀 Herramientas Recomendadas para Crear este Video con IA:</span>
+                    </div>
+                    <div id="m-tools-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 8px;">
+                        <!-- Se llena dinámicamente con InVideo, Claude/ChatGPT, ElevenLabs, CapCut -->
+                    </div>
+                </div>
+
+                <!-- 1. PROMPT MAESTRO PARA INVIDEO AI (TODO-EN-UNO) -->
+                <div class="info-card-block">
+                    <div class="info-block-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <span style="color: #38bdf8;">🎬 Opción 1: InVideo AI / Fliki (Generar Video Completo en 1 Clic):</span>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="copyElementText('m-invideo-prompt', 'Prompt para InVideo AI copiado')" class="btn-copy-code">📋 Copiar Prompt</button>
+                            <a href="https://invideo.io" target="_blank" class="btn-copy-code" style="background: #3b82f6; text-decoration: none;">🌐 Ir a InVideo</a>
+                        </div>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+                        Pega este prompt en InVideo AI: genera el video de 15 min con guión, voz en off, clips B-Roll, música de fondo y subtítulos amarillos automáticamente.
+                    </div>
+                    <div id="m-invideo-prompt" class="code-display" style="white-space: pre-wrap; max-height: 180px; overflow-y: auto;"></div>
+                </div>
+
+                <!-- 2. PROMPT MAESTRO PARA CHATGPT / CLAUDE (GUIÓN DE 2,500 PALABRAS) -->
+                <div class="info-card-block">
+                    <div class="info-block-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <span style="color: #4ade80;">📜 Opción 2: Prompt Maestro para Guión Completo (ChatGPT / Claude 3.5 Sonnet):</span>
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="copyElementText('m-script-master-prompt', 'Prompt de guión copiado')" class="btn-copy-code">📋 Copiar Prompt</button>
+                            <a href="https://chatgpt.com" target="_blank" class="btn-copy-code" style="background: #10b981; text-decoration: none;">🌐 Ir a ChatGPT</a>
+                            <a href="https://claude.ai" target="_blank" class="btn-copy-code" style="background: #d97706; text-decoration: none;">🌐 Ir a Claude</a>
+                        </div>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+                        Pega este prompt en ChatGPT o Claude para redactar el guión palabra por palabra (~2,500 palabras) con pausas dramáticas, efectos de sonido [SFX] y ganchos midroll.
+                    </div>
+                    <div id="m-script-master-prompt" class="code-display" style="white-space: pre-wrap; max-height: 180px; overflow-y: auto;"></div>
+                </div>
+
+                <!-- 3. CONFIGURACIÓN DE VOZ ELEVENLABS -->
+                <div class="info-card-block">
+                    <div class="info-block-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <span style="color: #facc15;">🎙️ Opción 3: Configuración de Locución Humana (ElevenLabs):</span>
+                        <a href="https://elevenlabs.io" target="_blank" class="btn-copy-code" style="background: #eab308; color: #000; text-decoration: none;">🌐 Ir a ElevenLabs</a>
+                    </div>
+                    <div id="m-elevenlabs-box" style="font-size: 13px; line-height: 1.6; color: #cbd5e1; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px;"></div>
+                </div>
+
+                <!-- 4. PROMPTS DE ESCENAS B-ROLL PARA RUNWAY / KLING AI -->
+                <div class="info-card-block">
+                    <div class="info-block-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <span style="color: #f43f5e;">🎥 Opción 4: Prompts Escena por Escena para B-Roll Cinemático (Kling / Runway Gen-3):</span>
+                        <a href="https://klingai.com" target="_blank" class="btn-copy-code" style="background: #e11d48; text-decoration: none;">🌐 Ir a Kling AI</a>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+                        Prompts listos para generar tomas cinematográficas con movimientos de cámara (slow push-in, drone, tracking).
+                    </div>
+                    <div id="m-broll-scenes-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                </div>
+
+            </div>
+
+            <!-- ACCIÓN FINAL -->
+            <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+                <button onclick="saveCurrentAdaptationToObsidian()" class="btn-execute-search" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    ⭐ Guardar Ficha Completa en Obsidian
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 2: VISOR DE TRANSCRIPCIÓN COMPLETA DEL VIDEO ("Todo lo del video") -->
+    <!-- ========================================================================= -->
+    <div id="modal-transcript" class="modal-overlay" onclick="if(event.target === this) closeModal('modal-transcript')">
+        <div class="modal-card">
+            
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title">📜 Transcripción Oficial del Video</div>
+                    <div id="m-transcript-subtitle" style="font-size: 13px; color: var(--text-muted); margin-top: 4px;"></div>
+                </div>
+                <button onclick="closeModal('modal-transcript')" class="modal-close">✕</button>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+                <button onclick="copyElementText('transcript-full-text', 'Transcripción completa copiada')" class="btn-open-photopea">
+                    📋 Copiar Transcripción
+                </button>
+                <button onclick="downloadTranscriptTxt()" class="btn-download-thumb">
+                    💾 Descargar (.txt)
+                </button>
+                <button onclick="showYoutubeChapters()" class="btn-action-cloner" style="font-size: 12px; padding: 8px 12px;">
+                    ⏱️ Generar Capítulos (00:00)
+                </button>
+            </div>
+
+            <div class="info-card-block">
+                <div class="info-block-title">Texto Completo Hablado:</div>
+                <div id="transcript-full-text" style="font-size: 13px; color: #e2e8f0; line-height: 1.7; max-height: 380px; overflow-y: auto; white-space: pre-wrap; background: #07090e; padding: 14px; border-radius: 8px;">
+                    Cargando transcripción...
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICACIÓN -->
+    <div id="toast">Acción completada con éxito</div>
+
+    <script>
+        let currentVideos = [];
+        // Base del backend: en GitHub Pages la página es estática y el
+        // backend vive en Render; en Render mismo se usa ruta relativa.
+        const API_BASE = (window.location.hostname || '').endsWith('github.io')
+            ? 'https://viralhunter-youtube.onrender.com' : '';
+        let currentSelectedVideo = null;
+        let currentAdaptation = null;
+        let activeTranscriptText = "";
+        let currentGeneratedImage = null;
+        let originalDetectedPrompt = "";
+        // Texto real escrito en la miniatura original (en español, tal cual),
+        // leído de la imagen con OCR. Antes el texto venía de una frase
+        // genérica del backend ("CALLA Y OBSERVA", "EL GRAN ENGAÑO"...) según
+        // la categoría, y nunca era el título real de la miniatura.
+        let originalThumbText = "";
+        // Prompt COMPLETO de clonado: antes el clon solo usaba la descripción
+        // visual de Visión y se perdían el sujeto, el fondo, la paleta, la
+        // dirección de arte, el texto y el título del video. Ahora se junta
+        // TODO lo que trae la adaptación + Visión + texto capturado.
+        let fullClonePrompt = "";
+        // Direcciones de variación de color para "Solo cambiar colores": el
+        // cambio es solo de paleta, nunca de sujeto, pose o composición.
+        const COLOR_VARIATIONS = [
+            "shift the color palette slightly warmer, with golden tones",
+            "shift the color palette slightly cooler, with teal-blue tones",
+            "make the colors slightly more saturated and vibrant",
+            "make the colors slightly more muted and cinematic, with soft desaturation",
+            "give it a subtle teal-and-orange cinematic color grade"
+        ];
+        // Ajustes sutiles de luz y tono que se combinan con el cambio de
+        // color en cada variación: antes solo se hacía UN cambio y casi no se
+        // notaba; ahora son color + luz + tono a la vez, todos sutiles.
+        const LIGHT_TWEAKS = [
+            "slightly lift the highlights for a brighter feel",
+            "deepen the shadows a touch for more drama",
+            "add a touch more contrast",
+            "add a soft warm glow to the light",
+            "make the lighting slightly cooler and crisper"
+        ];
+        const TONE_TWEAKS = [
+            "slightly increase the saturation",
+            "slightly soften the saturation",
+            "add a subtle warm color temperature shift",
+            "add a subtle cool color temperature shift"
+        ];
+
+        // Arma el prompt completo de clonado con TODO: descripción visual de
+        // Visión + sujeto + fondo + paleta + dirección de arte + texto de la
+        // miniatura (en español) + título del video. Lo deja en el campo de
+        // prompt para que se vea y se pueda editar. Si algo falta, se omite.
+        function buildFullClonePrompt() {
+            const cloner = currentAdaptation?.thumbnail_cloner || {};
+            const parts = [];
+            if (originalDetectedPrompt) parts.push("Visual description of the original thumbnail: " + originalDetectedPrompt);
+            if (cloner.subject) parts.push("Main subject: " + cloner.subject);
+            if (cloner.background_prompt) parts.push("Background: " + cloner.background_prompt);
+            if (cloner.color_palette) parts.push("Color palette: " + cloner.color_palette);
+            if (cloner.art_direction) parts.push("Art direction: " + cloner.art_direction);
+            if (originalThumbText) parts.push("Thumbnail text in Spanish (it will be added separately as overlay, do not render text in the image): \"" + originalThumbText + "\"");
+            if (currentSelectedVideo?.title) parts.push("Video title (context): \"" + currentSelectedVideo.title + "\"");
+            fullClonePrompt = parts.join("\n");
+            const input = document.getElementById('ai-prompt-input');
+            if (input && fullClonePrompt) input.value = fullClonePrompt;
+            return fullClonePrompt;
+        }
+        // Miniatura original en base64 (vía /api/thumbnail-proxy), en caché por
+        // video: es la imagen de referencia para el clonado imagen-a-imagen.
+        // Sin ella, FLUX solo recibe texto y la "copia" sale inventada.
+        let currentOriginalThumbDataUrl = "";
+        let currentOriginalThumbVideoId = "";
+
+        // Devuelve la miniatura original como data-URL (base64). La pide al
+        // proxy del backend para evitar CORS; si el proxy falla, usa la URL
+        // directa de YouTube (maxres). Devuelve "" si no hay ninguna.
+        async function getOriginalThumbnailDataUrl() {
+            if (!currentSelectedVideo) return "";
+            const videoId = currentSelectedVideo.video_id;
+            if (currentOriginalThumbVideoId === videoId && currentOriginalThumbDataUrl) {
+                return currentOriginalThumbDataUrl;
+            }
+            let imgDataUrl = currentSelectedVideo.maxres_thumbnail_url || currentSelectedVideo.thumbnail_url || "";
+            try {
+                const proxyRes = await fetch(`${API_BASE}/api/thumbnail-proxy?video_id=${videoId}`);
+                if (proxyRes.ok) {
+                    const pData = await proxyRes.json();
+                    if (pData.data_url) imgDataUrl = pData.data_url;
+                }
+            } catch (eProxy) {
+                console.warn("Proxy de miniatura no disponible, uso URL directa:", eProxy);
+            }
+            currentOriginalThumbDataUrl = imgDataUrl;
+            currentOriginalThumbVideoId = videoId;
+            return imgDataUrl;
+        }
+
+        // Modelos de edición GRATUITOS (Cloudflare, la misma familia del
+        // FLUX.1 Schnell que usaba la app antes sin saldo). GPT Image 2 y
+        // Nano Banana son DE PAGO en Puter (modelo User-Pays: cada usuario
+        // paga su uso) y con la cuenta sin saldo Puter muestra el aviso
+        // "Low Balance" y la generación falla. Por eso el clonado ya NO los
+        // usa: prueba FLUX.2 Dev de Cloudflare, que sí acepta una imagen de
+        // referencia, y si falla cae al Schnell gratuito por texto.
+        const EDIT_MODELS = ["@cf/black-forest-labs/flux-2-dev"];
+        function isInsufficientFundsError(err) {
+            const msg = ((err && err.message) || "") + " " + ((err && err.code) || "") + " " + ((err && err.errorCode) || "");
+            return /insufficient_funds|insufficient funds|low balance|funding/i.test(msg);
+        }
+        async function generateWithEditModels(prompt, refImage) {
+            for (const modelId of EDIT_MODELS) {
+                try {
+                    const imgEl = await puter.ai.txt2img({
+                        prompt,
+                        model: modelId,
+                        input_image: refImage,
+                        ratio: { w: 16, h: 9 }
+                    });
+                    if (imgEl && imgEl.src) return imgEl;
+                } catch (errEdit) {
+                    console.warn(`Modelo de edición ${modelId} falló:`, errEdit);
+                    if (isInsufficientFundsError(errEdit)) break; // sin saldo: no insistir
+                }
+            }
+            return null;
+        }
+
+        // Variación de color LOCAL (sin IA): si la edición con IA falla, se
+        // aplica el cambio de color directamente sobre la miniatura original
+        // en el canvas (giro de tono + saturación + contraste). Es gratis,
+        // instantáneo y conserva la imagen exacta, solo con otros colores.
+        // Guarda el resultado como imagen generada para que "Aplicar texto"
+        // no restaure la original sin el cambio. Devuelve true si se aplicó.
+        async function applyLocalColorShift(refImageDataUrl) {
+            return new Promise((resolve) => {
+                const canvas = document.getElementById('canvas-ai-thumb');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    const hue = [18, -22, 32, -35, 12][Math.floor(Math.random() * 5)];
+                    const sat = [1.3, 1.35, 0.85, 1.15, 1.25][Math.floor(Math.random() * 5)];
+                    const con = [1.08, 1.12, 1.05, 0.95, 1.1][Math.floor(Math.random() * 5)];
+                    ctx.clearRect(0, 0, 1280, 720);
+                    ctx.filter = `hue-rotate(${hue}deg) saturate(${sat}) contrast(${con})`;
+                    ctx.drawImage(img, 0, 0, 1280, 720);
+                    ctx.filter = 'none';
+                    const snap = new Image();
+                    snap.onload = () => { currentGeneratedImage = snap; resolve(true); };
+                    snap.onerror = () => resolve(true);
+                    snap.src = canvas.toDataURL('image/jpeg', 0.95);
+                };
+                img.onerror = () => resolve(false);
+                img.src = refImageDataUrl;
+            });
+        }
+
+        function restoreOriginalPrompt() {
+            const promptToRestore = fullClonePrompt || originalDetectedPrompt;
+            if (!promptToRestore) return;
+            const input = document.getElementById('ai-prompt-input');
+            if (input) input.value = promptToRestore;
+            showToast("Prompt original de la miniatura restaurado");
+        }
+
+        function replaceSubjectPrompt(newSubject) {
+            const input = document.getElementById('ai-prompt-input');
+            let cur = input.value.trim();
+            if (!cur) {
+                input.value = `Cinematic portrait of ${newSubject}, dramatic rim lighting, 16:9`;
+            } else {
+                input.value = `Cinematic portrait of ${newSubject}, ` + cur;
+            }
+            showToast("Personaje modificado en el prompt");
+        }
+
+        function convertToCleanBackground() {
+            const input = document.getElementById('ai-prompt-input');
+            if (currentAdaptation?.thumbnail_cloner?.background_prompt) {
+                input.value = currentAdaptation.thumbnail_cloner.background_prompt;
+            } else {
+                input.value = "Atmospheric empty dark cinematic background with volumetric lighting, no people, clean central copy space, 16:9 aspect ratio";
+            }
+            showToast("Convertido a fondo limpio (sin sujeto)");
+        }
+
+        function appendStylePrompt(styleText) {
+            const input = document.getElementById('ai-prompt-input');
+            if (input.value.trim()) {
+                input.value = input.value.trim() + ", " + styleText;
+            } else {
+                input.value = styleText;
+            }
+            showToast("Estilo añadido a la instrucción");
+        }
+
+        async function scanThumbnailWithVision() {
+            if (!currentSelectedVideo) return;
+            const videoId = currentSelectedVideo.video_id;
+            const btn = document.getElementById('btn-scan-vision');
+            const input = document.getElementById('ai-prompt-input');
+            const badge = document.getElementById('vision-detected-badge');
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span>⏳ Escaneando con Visión IA...</span>`;
+            }
+            showToast("Analizando la imagen de la miniatura con Visión...");
+
+            try {
+                const imgDataUrl = await getOriginalThumbnailDataUrl();
+
+                const visionInstruction = "You are an expert viral YouTube thumbnail reverse-engineer and prompt engineer. Analyze this thumbnail image in depth. Return a precise, descriptive image prompt in English for FLUX.1 describing: 1. Main subject, clothing, facial expression, and pose. 2. The exact background environment and setting. 3. Lighting style (e.g. dramatic chiaroscuro, golden rim light, deep shadows) and color palette. 4. Composition and camera angle. Do NOT include text on the image or words. Return ONLY the English prompt, no conversational filler.";
+
+                let promptResult = "";
+                if (window.puter && puter.ai) {
+                    const resp = await puter.ai.chat(visionInstruction, imgDataUrl, { model: 'gpt-4o' });
+                    promptResult = (typeof resp === 'string') ? resp : (resp?.message?.content || resp?.text || "");
+                }
+
+                if (promptResult && promptResult.length > 20) {
+                    originalDetectedPrompt = promptResult.trim();
+                    if (input) input.value = originalDetectedPrompt;
+                    if (badge) badge.style.display = 'inline-flex';
+                    showToast("¡Prompt real extraído con Visión IA!");
+                } else {
+                    showToast("Escaneo completado. Prompt listo.");
+                }
+
+                // Capturar el texto REAL de la miniatura original (el título
+                // en español que lleva escrito), para ponerlo en el clon.
+                // Primero OCR (puter.ai.img2txt, hecho para leer texto de
+                // imágenes); si no lee nada, se le pregunta a Visión solo por
+                // el texto. Si tampoco hay texto, queda la frase del backend.
+                try {
+                    let ocrText = "";
+                    if (window.puter && puter.ai && puter.ai.img2txt) {
+                        const ocrResp = await puter.ai.img2txt(imgDataUrl);
+                        ocrText = (typeof ocrResp === 'string') ? ocrResp : (ocrResp?.text || "");
+                    }
+                    if (!ocrText || ocrText.trim().length < 2) {
+                        const textResp = await puter.ai.chat("Transcribe exactly the text written on this thumbnail image, preserving the original language (Spanish). Return ONLY the text, no explanation.", imgDataUrl, { model: 'gpt-4o' });
+                        ocrText = (typeof textResp === 'string') ? textResp : (textResp?.message?.content || textResp?.text || "");
+                    }
+                    ocrText = (ocrText || "").replace(/\s+/g, " ").trim();
+                    if (ocrText) {
+                        // TRADUCIR el título capturado a español: muchas
+                        // miniaturas originales vienen en inglés y el clon es
+                        // para el canal en español. Si ya está en español, se
+                        // devuelve tal cual. Si la traducción falla, se usa el
+                        // texto capturado sin traducir.
+                        try {
+                            const trResp = await puter.ai.chat(
+                                "Translate this YouTube thumbnail title text to Spanish. Keep it short, punchy and viral, in the style of a YouTube thumbnail (few words, high impact). If it is already in Spanish, return it unchanged. Return ONLY the translated text, no explanation. Text: \"" + ocrText.replace(/"/g, "'") + "\"",
+                                { model: 'gpt-4o' }
+                            );
+                            const trText = (typeof trResp === 'string') ? trResp : (trResp?.message?.content || trResp?.text || "");
+                            if (trText && trText.trim()) ocrText = trText.replace(/\s+/g, " ").trim();
+                        } catch (eTr) {
+                            console.warn("No se pudo traducir el título, se usa el capturado:", eTr);
+                        }
+                        originalThumbText = ocrText;
+                        const overlayInput = document.getElementById('ai-overlay-text');
+                        if (overlayInput) overlayInput.value = ocrText;
+                    }
+                } catch (eOcr) {
+                    console.warn("No se pudo leer el texto de la miniatura:", eOcr);
+                }
+            } catch (err) {
+                console.warn("Error en escaneo con visión:", err);
+                showToast("Visión no disponible temporalmente. Se mantiene el prompt detectado.");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>👁️ Re-escanear con Visión</span>`;
+                }
+                // Armar el prompt COMPLETO (Visión + adaptación + texto) al
+                // final del escaneo, funcione o no la Visión: si falla, se
+                // arma con la plantilla del backend + los campos de la
+                // adaptación, nunca queda solo la descripción visual.
+                buildFullClonePrompt();
+            }
+        }
+
+        async function generateThumbnailWithAI(isExact = false) {
+            const input = document.getElementById('ai-prompt-input');
+            let promptText = input.value.trim();
+            // Clonado exacto: usar el prompt COMPLETO (Visión + sujeto +
+            // fondo + paleta + dirección de arte + texto + título del
+            // video), no solo la descripción visual. Si no se armó el
+            // completo, se usa la descripción de Visión.
+            if (isExact && (fullClonePrompt || originalDetectedPrompt)) {
+                promptText = fullClonePrompt || originalDetectedPrompt;
+                input.value = promptText;
+            }
+            if (!promptText) {
+                showToast("Escribe una instrucción para la IA");
+                return;
+            }
+
+            const btnExact = document.getElementById('btn-clone-exact');
+            const btnMod = document.getElementById('btn-generate-ai-thumb');
+            const statusBox = document.getElementById('ai-gen-status');
+            const placeholder = document.getElementById('ai-thumb-placeholder');
+            const overlayBox = document.getElementById('ai-overlay-box');
+            const canvas = document.getElementById('canvas-ai-thumb');
+            const ctx = canvas.getContext('2d');
+
+            if (btnExact) btnExact.disabled = true;
+            if (btnMod) btnMod.disabled = true;
+            statusBox.style.display = 'block';
+            statusBox.style.background = 'rgba(59, 130, 246, 0.15)';
+            statusBox.style.borderColor = '#3b82f6';
+            statusBox.style.color = '#93c5fd';
+            statusBox.innerText = isExact
+                ? "Clonando la miniatura usando la original como referencia (imagen a imagen) en 1280x720..."
+                : "Aplicando variación sutil de color, luz y tono a la miniatura original...";
+
+            try {
+                let imgEl;
+                // CLONADO EXACTO: imagen a imagen con un modelo de edición
+                // GRATUITO (FLUX.2 Dev de Cloudflare, que acepta imagen de
+                // referencia). Antes se usaban GPT Image 2 y Nano Banana, que
+                // son DE PAGO en Puter y con la cuenta sin saldo mostraban el
+                // aviso "Low Balance". FLUX.1 Schnell no sirve para esto
+                // porque RECHAZA imágenes de entrada (docs de Puter).
+                // Si no hay imagen de referencia o el modelo gratuito falla,
+                // se cae al camino viejo de solo texto con Schnell y se avisa:
+                // esa recreación NO quedará igual a la original.
+                let usedTextOnlyFallback = false;
+                if (isExact) {
+                    const refImage = await getOriginalThumbnailDataUrl();
+                    const editPrompt = "Recreate this exact YouTube thumbnail image as faithfully as possible from the input image: keep the same subject, face, facial expression, pose, clothing, background, composition, framing, lighting and color palette. Do not add, remove, move or restyle any element. Do not add any text. Details to preserve: " + promptText;
+                    if (refImage) {
+                        imgEl = await generateWithEditModels(editPrompt, refImage);
+                    }
+                    if (!imgEl || !imgEl.src) {
+                        console.warn("Clonado con referencia no disponible, cayendo a solo texto.");
+                        usedTextOnlyFallback = true;
+                    }
+                } else {
+                    // VARIACIÓN SOLO DE COLORES: también imagen a imagen con
+                    // la original como referencia, con tres cambios sutiles
+                    // (color + luz + tono). Si la edición con IA falla, NO se
+                    // genera una imagen distinta por texto: se aplica el
+                    // cambio de color LOCAL sobre la original (gratis, exacto).
+                    const refImage = await getOriginalThumbnailDataUrl();
+                    if (!refImage) {
+                        throw new Error("No se pudo cargar la miniatura original como referencia para variar sus colores.");
+                    }
+                    const colorDir = COLOR_VARIATIONS[Math.floor(Math.random() * COLOR_VARIATIONS.length)];
+                    const lightTweak = LIGHT_TWEAKS[Math.floor(Math.random() * LIGHT_TWEAKS.length)];
+                    const toneTweak = TONE_TWEAKS[Math.floor(Math.random() * TONE_TWEAKS.length)];
+                    const colorPrompt = "Edit this exact YouTube thumbnail image with ONLY subtle changes, combining these three tweaks: (1) color: " + colorDir + "; (2) light: " + lightTweak + "; (3) tone: " + toneTweak + ". Remove ALL text, words and lettering from the image completely, reconstructing cleanly the areas where the text was, so the result has no text at all. Keep everything else exactly the same: same subject, face, facial expression, pose, clothing, background, composition, framing and layout. Do not add, remove, move or restyle any other element. Details to preserve: " + promptText;
+                    imgEl = await generateWithEditModels(colorPrompt, refImage);
+                    if (!imgEl || !imgEl.src) {
+                        const okLocal = await applyLocalColorShift(refImage);
+                        if (okLocal) {
+                            placeholder.style.display = 'none';
+                            overlayBox.style.display = 'flex';
+                            statusBox.style.display = 'none';
+                            if (btnExact) btnExact.disabled = false;
+                            if (btnMod) btnMod.disabled = false;
+                            showToast("La IA no respondió; se aplicó el cambio de color directo sobre tu miniatura (sin IA).");
+                            return;
+                        }
+                        throw new Error("No se pudo aplicar la variación de color con la imagen original como referencia. Reintenta en unos segundos.");
+                    }
+                }
+                if (!imgEl || !imgEl.src) {
+                    const fullPrompt = promptText + ", 16:9 aspect ratio, youtube thumbnail, dramatic cinematic lighting, ultra detailed 8k photography, clean composition without text";
+                    try {
+                        imgEl = await puter.ai.txt2img({
+                            prompt: fullPrompt,
+                            model: "black-forest-labs/FLUX.1-schnell"
+                        });
+                    } catch (errModel) {
+                        console.warn("Reintentando con modelo por defecto de Puter:", errModel);
+                        imgEl = await puter.ai.txt2img(fullPrompt);
+                    }
+                    if (isExact) usedTextOnlyFallback = true;
+                }
+
+                if (imgEl && imgEl.src) {
+                    const tempImg = new Image();
+                    tempImg.crossOrigin = "anonymous";
+                    tempImg.onload = () => {
+                        currentGeneratedImage = tempImg;
+                        ctx.clearRect(0, 0, 1280, 720);
+                        ctx.drawImage(tempImg, 0, 0, 1280, 720);
+
+                        placeholder.style.display = 'none';
+                        overlayBox.style.display = 'flex';
+                        statusBox.style.display = 'none';
+                        if (btnExact) btnExact.disabled = false;
+                        if (btnMod) btnMod.disabled = false;
+                        if (isExact && usedTextOnlyFallback) {
+                            showToast("Clonado sin la imagen original como referencia: es solo una recreación por texto y no quedará igual. Reintenta en unos segundos.");
+                        } else {
+                            showToast(isExact ? "¡Miniatura clonada con la original como referencia!" : "¡Variación lista! Misma miniatura, otros colores, luz y tono, sin título.");
+                        }
+
+                        // Texto del clon: primero el título real leído de la
+                        // miniatura original (traducido a español); si no se
+                        // pudo leer, la frase sugerida del backend. SOLO se
+                        // pone encima en el clonado exacto: la variación de
+                        // solo colores sale SIN título (ni quemado en la
+                        // imagen ni puesto encima), limpia para usarla como
+                        // base. El texto queda en el campo por si el usuario
+                        // quiere aplicarlo a mano con "Aplicar".
+                        const suggestedText = originalThumbText || currentAdaptation?.thumbnail_cloner?.hook_text || "";
+                        if (suggestedText) {
+                            document.getElementById('ai-overlay-text').value = suggestedText;
+                            if (isExact) applyOverlayText();
+                        }
+                    };
+                    tempImg.src = imgEl.src;
+                } else {
+                    throw new Error("No se recibió imagen del motor de IA.");
+                }
+            } catch (e) {
+                console.error("Error en generación con IA:", e);
+                statusBox.style.display = 'block';
+                statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+                statusBox.style.borderColor = '#ef4444';
+                statusBox.style.color = '#fca5a5';
+                // Si el fallo trae mensaje propio (p. ej. la variación de
+                // color no se pudo aplicar), mostrarlo en vez del genérico.
+                statusBox.innerText = (e && e.message && e.message.indexOf("variación de color") !== -1)
+                    ? e.message
+                    : "Hubo una pausa temporal en el servicio de IA. Puedes reintentar en unos segundos.";
+                if (btnExact) btnExact.disabled = false;
+                if (btnMod) btnMod.disabled = false;
+                showToast("Error en el servicio de IA");
+            }
+        }
+
+        function applyOverlayText() {
+            const canvas = document.getElementById('canvas-ai-thumb');
+            const ctx = canvas.getContext('2d');
+            const text = document.getElementById('ai-overlay-text').value.trim().toUpperCase();
+
+            if (currentGeneratedImage) {
+                ctx.clearRect(0, 0, 1280, 720);
+                ctx.drawImage(currentGeneratedImage, 0, 0, 1280, 720);
+            }
+
+            if (!text) return;
+
+            // Ajuste automático: antes el texto era siempre 78px en una sola
+            // línea y los títulos largos se cortaban por los lados (se veía
+            // "SIFICADOR QUE ENGAÑÓ A LOS" sin el principio ni el final).
+            // Ahora se achica la fuente y se parte en líneas hasta que quepa
+            // dentro del canvas (máx. 3 líneas).
+            const maxWidth = 1280 * 0.92;
+            const fontFor = (size) => `900 ${size}px "Plus Jakarta Sans", Impact, sans-serif`;
+            const wrapLines = (size) => {
+                ctx.font = fontFor(size);
+                const words = text.split(/\s+/);
+                const lines = [];
+                let line = "";
+                for (const word of words) {
+                    const test = line ? line + " " + word : word;
+                    if (ctx.measureText(test).width <= maxWidth || !line) {
+                        line = test;
+                    } else {
+                        lines.push(line);
+                        line = word;
+                    }
+                }
+                if (line) lines.push(line);
+                return lines;
+            };
+            let fontSize = 78;
+            let lines = wrapLines(fontSize);
+            while (lines.length > 3 && fontSize > 28) {
+                fontSize -= 6;
+                lines = wrapLines(fontSize);
+            }
+            ctx.font = fontFor(fontSize);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const color = document.getElementById('ai-text-color').value || '#FACC15';
+            const position = document.getElementById('ai-text-pos').value || 'bottom';
+
+            const lineHeight = fontSize * 1.08;
+            const blockHeight = lines.length * lineHeight;
+            let blockTop = 700 - blockHeight; // abajo
+            if (position === 'center') blockTop = 360 - blockHeight / 2;
+            if (position === 'top') blockTop = 90;
+
+            const x = 640;
+
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = Math.max(8, Math.round(fontSize * 0.23));
+            ctx.lineJoin = 'miter';
+            ctx.miterLimit = 2;
+            ctx.fillStyle = color;
+
+            lines.forEach((line, i) => {
+                const y = blockTop + lineHeight * (i + 0.5);
+                ctx.strokeText(line, x, y);
+                ctx.fillText(line, x, y);
+            });
+
+            showToast("Texto aplicado a la miniatura");
+        }
+
+        function downloadGeneratedThumbnail() {
+            const canvas = document.getElementById('canvas-ai-thumb');
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = `miniatura_viral_${Date.now()}.jpg`;
+            a.click();
+            showToast("Miniatura descargada (.jpg 1280x720)");
+        }
+
+        async function saveGeneratedThumbToObsidian() {
+            const canvas = document.getElementById('canvas-ai-thumb');
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+            const videoId = currentSelectedVideo ? currentSelectedVideo.video_id : 'niche_idea';
+            const title = currentSelectedVideo ? currentSelectedVideo.title : 'Idea Viral';
+            const prompt = document.getElementById('ai-prompt-input').value;
+            const overlay = document.getElementById('ai-overlay-text').value;
+
+            try {
+                const res = await fetch(API_BASE + '/api/save-generated-thumbnail', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        video_id: videoId,
+                        title: title,
+                        image_base64: dataUrl,
+                        prompt: prompt,
+                        overlay_text: overlay
+                    })
+                });
+                const data = await res.json();
+                showToast(data.message || "Miniatura guardada en tu Bóveda de Obsidian");
+            } catch (e) {
+                showToast("Error guardando miniatura en Obsidian");
+            }
+        }
+
+        // INICIALIZACIÓN
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNichesCatalog();
+            // Ejecutar búsqueda inicial
+            triggerSearch();
+        });
+
+        // CAMBIO DE VISTAS PRINCIPALES
+        function switchMainView(viewId, btnEl) {
+            document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(viewId).classList.add('active');
+            if (btnEl) btnEl.classList.add('active');
+
+            if (viewId === 'view-favorites') {
+                loadFavorites();
+            }
+        }
+
+        // CARGAR CATÁLOGO DE NICHOS
+        async function loadNichesCatalog() {
+            const container = document.getElementById('niches-container');
+            try {
+                const res = await fetch(API_BASE + '/api/niches');
+                const niches = await res.json();
+
+                container.innerHTML = '';
+                niches.forEach(n => {
+                    const card = document.createElement('div');
+                    card.className = 'niche-card';
+                    card.innerHTML = `
+                        <div class="niche-top">
+                            <div class="niche-category">${n.category}</div>
+                            <div class="niche-name">${n.name}</div>
+                            <div class="niche-desc">${n.description}</div>
+                        </div>
+
+                        <div class="niche-metrics">
+                            <div class="metric-item">
+                                <span class="metric-label">RPM Estimado</span>
+                                <span class="metric-val val-rpm">${n.rpm_range}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Multiplicador</span>
+                                <span class="metric-val val-mult">${n.avg_multiplier}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Competencia</span>
+                                <span class="metric-val val-comp">${n.competition}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Saturación</span>
+                                <span class="metric-val val-sat">${n.saturation}</span>
+                            </div>
+                        </div>
+
+                        <button onclick="selectNicheToSearch('${n.primary_query}')" class="btn-load-niche">
+                            <span>⚡ Explorar Outliers de este Nicho</span>
+                        </button>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (e) {
+                container.innerHTML = `<div style="color: red; padding: 20px;">Error cargando catálogo de nichos.</div>`;
+            }
+        }
+
+        // SELECCIONAR NICHO Y CAMBIAR A VISTA DE BÚSQUEDA
+        function selectNicheToSearch(query) {
+            document.getElementById('input-query').value = query;
+            const searchNavBtn = document.querySelectorAll('.nav-btn')[1];
+            switchMainView('view-search', searchNavBtn);
+            triggerSearch();
+        }
+
+        // EJECUTAR BÚSQUEDA MULTI-VARIABLE
+        async function triggerSearch() {
+            const query = document.getElementById('input-query').value.trim();
+            if (!query) return;
+
+            const dateFilter = document.getElementById('filter-date').value;
+            const minViews = document.getElementById('filter-views').value;
+            const minDuration = document.getElementById('filter-duration').value;
+            const maxSubs = document.getElementById('filter-subs').value;
+            const sortBy = document.getElementById('filter-sort').value;
+
+            const loading = document.getElementById('loading');
+            const grid = document.getElementById('video-grid');
+            const status = document.getElementById('results-status');
+
+            loading.style.display = 'block';
+            grid.innerHTML = '';
+            status.innerText = `Consultando YouTube con filtros avanzados...`;
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+            try {
+                const url = `${API_BASE}/api/search?q=${encodeURIComponent(query)}&max_subs=${maxSubs}&min_duration=${minDuration}&min_views=${minViews}&date_filter=${dateFilter}&sort_by=${sortBy}&limit=40`;
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                const data = await res.json();
+
+                currentVideos = data.results || [];
+                loading.style.display = 'none';
+
+                if (data.relaxed_notice) {
+                    status.innerHTML = `<div style="background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); color: #fde047; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.4;">${data.relaxed_notice} (${data.strict_count ?? 0} con tus filtros exactos)</div>`;
+                } else {
+                    status.innerText = `Se encontraron ${currentVideos.length} videos anomalía para "${query}"`;
+                }
+                renderVideos(currentVideos, grid);
+            } catch (e) {
+                clearTimeout(timeoutId);
+                loading.style.display = 'none';
+                if (e.name === 'AbortError') {
+                    status.innerHTML = `<div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; padding: 12px 16px; border-radius: 10px; font-size: 13px;">⚠️ El servidor tardó más de 25 segundos en responder. Por favor reintenta la búsqueda o reduce los filtros.</div>`;
+                    showToast("Tiempo de espera agotado");
+                } else {
+                    status.innerText = `Error al consultar videos.`;
+                    showToast("Error conectando con el servidor");
+                }
+            }
+        }
+
+        // RENDERIZAR TARJETAS DE VIDEOS
+        function renderVideos(videos, container) {
+            container.innerHTML = '';
+
+            if (videos.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text-muted);">
+                        <div style="font-size: 40px; margin-bottom: 12px;">🔍</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #fff;">No se encontraron videos con esos filtros exactos.</div>
+                        <div style="font-size: 13px; margin-top: 6px;">Prueba subiendo el tope de suscriptores o cambiando el rango de fechas.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            videos.forEach((v, index) => {
+                const card = document.createElement('div');
+                card.className = 'video-card';
+                // Sin suscriptores verificados no hay multiplicador: no mostrar
+                // un número inventado. "sin verificar" en vez de "15.000 subs".
+                const badgeText = (v.multiplier === null || v.multiplier === undefined)
+                    ? `${v.badge}`
+                    : `${v.badge} (${v.multiplier}x)`;
+                const subsText = v.subscribers_verified ? `${v.subscribers_formatted} subs` : `subs sin verificar`;
+
+                card.innerHTML = `
+                    <div class="thumb-box">
+                        <span class="badge-outlier ${v.badge_class}">
+                            ${badgeText}
+                        </span>
+                        <img src="${v.thumbnail_url}" alt="${v.title}" class="thumb-img" loading="lazy">
+                        <span class="badge-duration">${v.duration_text}</span>
+                    </div>
+
+                    <div class="card-content">
+                        <div>
+                            <div class="video-title" title="${v.title}">${v.title}</div>
+                            
+                            <div class="channel-row">
+                                <span class="channel-name" title="${v.channel_name}">👤 ${v.channel_name}</span>
+                                <span class="channel-subs">${subsText}</span>
+                            </div>
+
+                            <div class="video-stats-grid">
+                                <div class="stat-block">
+                                    <span class="stat-label">Vistas Totales</span>
+                                    <span class="stat-value val-views">${v.views_formatted}</span>
+                                </div>
+                                <div class="stat-block">
+                                    <span class="stat-label">Velocidad</span>
+                                    <span class="stat-value val-velocity">${v.views_per_day_formatted}/día</span>
+                                </div>
+                                <div class="stat-block">
+                                    <span class="stat-label">RPM Est.</span>
+                                    <span class="stat-value val-rpm-tag">${v.estimated_rpm_formatted}</span>
+                                </div>
+                                <div class="stat-block">
+                                    <span class="stat-label">Ganancia Est.</span>
+                                    <span class="stat-value val-earnings">${v.estimated_earnings_formatted}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-actions-grid">
+                            <button onclick="openClonerModal(${index})" class="btn-action-cloner" title="Clonar miniatura y empaquetado">
+                                <span>🎨 Clonar & Adaptar</span>
+                            </button>
+                            <button onclick="openTranscriptModal(${index})" class="btn-action-icon" title="Ver Transcripción Completa">
+                                📜
+                            </button>
+                            <button onclick="quickSaveFavorite(${index})" class="btn-action-icon" title="Guardar en Bóveda de Obsidian">
+                                ⭐
+                            </button>
+                            <a href="${v.youtube_url}" target="_blank" class="btn-action-icon" title="Ver en YouTube">
+                                ▶
+                            </a>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // ABRIR MODAL DE CLONACIÓN Y RECREACIÓN DE MINIATURA
+        async function openClonerModal(index) {
+            const video = currentVideos[index];
+            if (!video) return;
+
+            currentSelectedVideo = video;
+            const modal = document.getElementById('modal-cloner');
+            if (!modal) return;
+
+            // Asegurar que la primera pestaña (Miniatura) esté activa
+            const firstTabBtn = document.querySelector('.modal-tab-btn');
+            if (firstTabBtn) switchModalTab('mtab-thumb', firstTabBtn);
+
+            const elTitle = document.getElementById('modal-video-title');
+            if (elTitle) {
+                const multText = (video.multiplier === null || video.multiplier === undefined) ? 'sin verificar' : `${video.multiplier}x`;
+                const subsText = video.subscribers_verified ? `${video.subscribers_formatted} subs` : 'subs sin verificar';
+                elTitle.innerText = `Video: "${video.title}" | Canal: ${video.channel_name} (${subsText}) | Multiplicador: ${multText}`;
+            }
+
+            const elThumbImg = document.getElementById('m-thumb-img');
+            if (elThumbImg) elThumbImg.src = video.maxres_thumbnail_url || video.thumbnail_url;
+
+            const elDl = document.getElementById('btn-download-thumb-hd');
+            if (elDl) elDl.href = video.maxres_thumbnail_url || video.thumbnail_url;
+
+            // Resetear canvas de IA
+            currentGeneratedImage = null;
+            originalThumbText = "";
+            fullClonePrompt = "";
+            const canvas = document.getElementById('canvas-ai-thumb');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, 1280, 720);
+            }
+            const elPlaceholder = document.getElementById('ai-thumb-placeholder');
+            if (elPlaceholder) elPlaceholder.style.display = 'flex';
+            const elOverlayBox = document.getElementById('ai-overlay-box');
+            if (elOverlayBox) elOverlayBox.style.display = 'none';
+            const elGenStatus = document.getElementById('ai-gen-status');
+            if (elGenStatus) elGenStatus.style.display = 'none';
+
+            // Abrir el modal inmediatamente para feedback al instante
+            modal.style.display = 'flex';
+
+            const elPromptInput = document.getElementById('ai-prompt-input');
+            if (elPromptInput) elPromptInput.value = "Generando fórmula psicológica de empaquetado...";
+
+            try {
+                const res = await fetch(API_BASE + '/api/adapt', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({video: video})
+                });
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                const adapt = await res.json();
+                currentAdaptation = adapt;
+
+                // Render pestaña miniatura con comprobación segura de elementos
+                const cloner = adapt.thumbnail_cloner || {};
+                const elHook = document.getElementById('m-thumb-hook-text');
+                if (elHook) elHook.innerText = `"${cloner.hook_text || ''}"`;
+
+                const elMid = document.getElementById('m-thumb-midjourney');
+                if (elMid) elMid.innerText = cloner.midjourney_prompt || '';
+
+                const elBg = document.getElementById('m-thumb-bg');
+                if (elBg) elBg.innerText = cloner.background_prompt || '';
+
+                const elDir = document.getElementById('m-thumb-direction');
+                if (elDir) elDir.innerText = cloner.art_direction || '';
+
+                // Prellenar inputs del estudio de IA
+                originalDetectedPrompt = cloner.midjourney_prompt || '';
+                if (elPromptInput) elPromptInput.value = originalDetectedPrompt;
+
+                const elBadge = document.getElementById('vision-detected-badge');
+                if (elBadge) elBadge.style.display = 'none';
+
+                // Escaneo de Visión AUTOMÁTICO al abrir el modal: antes solo se
+                // hacía si el usuario pulsaba el botón a mano, así que "Clonar
+                // Tal Cual" usaba la plantilla genérica del backend y la copia
+                // no se parecía a la miniatura real. Si la Visión falla, se
+                // mantiene la plantilla como respaldo (scan... lo gestiona).
+                try { await scanThumbnailWithVision(); } catch (eScan) {
+                    console.warn("Escaneo automático de Visión no disponible:", eScan);
+                }
+
+                const elOverlay = document.getElementById('ai-overlay-text');
+                if (elOverlay) elOverlay.value = cloner.hook_text || '';
+
+                // Render pestaña títulos
+                const titlesList = document.getElementById('m-titles-list');
+                if (titlesList) {
+                    titlesList.innerHTML = '';
+                    (adapt.spanish_titles || []).forEach((t, i) => {
+                        const row = document.createElement('div');
+                        row.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 10px 14px; border-radius: 8px;";
+                        row.innerHTML = `
+                            <span style="font-size: 13px; font-weight: 700; color: #fff;">${i+1}. ${t}</span>
+                            <button onclick="copyText('${t.replace(/'/g, "\\'")}', 'Título copiado')" class="btn-copy-code">📋 Copiar</button>
+                        `;
+                        titlesList.appendChild(row);
+                    });
+                }
+
+                // Render auditoría de empaquetado (Linter yt-package)
+                const audit = adapt.packaging_audit || {};
+                const elScore = document.getElementById('pkg-audit-score');
+                if (elScore) {
+                    elScore.innerText = `Score: ${audit.score || 85}/100 · ${audit.rating || 'BUENO'}`;
+                    elScore.style.background = (audit.score >= 80) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(234, 179, 8, 0.2)';
+                    elScore.style.color = (audit.score >= 80) ? '#34d399' : '#facc15';
+                }
+
+                const elMobile = document.getElementById('pkg-mobile-preview');
+                if (elMobile) elMobile.innerText = `"${audit.mobile_preview || ''}"`;
+
+                const elDetails = document.getElementById('pkg-audit-details');
+                if (elDetails) {
+                    elDetails.innerHTML = '';
+                    (audit.good || []).forEach(g => {
+                        const div = document.createElement('div');
+                        div.style.cssText = 'color: #34d399; font-size: 12px; display: flex; align-items: center; gap: 6px;';
+                        div.innerHTML = `<span>✅</span> <span>${g}</span>`;
+                        elDetails.appendChild(div);
+                    });
+                    (audit.issues || []).forEach(iss => {
+                        const div = document.createElement('div');
+                        div.style.cssText = 'color: #facc15; font-size: 12px; display: flex; align-items: center; gap: 6px;';
+                        div.innerHTML = `<span>⚠️</span> <span>${iss}</span>`;
+                        elDetails.appendChild(div);
+                    });
+                }
+
+                // Render 3 ganchos probados de hooks.json
+                const hooksList = document.getElementById('m-proven-hooks-list');
+                if (hooksList) {
+                    hooksList.innerHTML = '';
+                    (adapt.proven_hooks || []).forEach((h, idx) => {
+                        const item = document.createElement('div');
+                        item.style.cssText = 'background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px;';
+                        item.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <span style="font-size: 12px; font-weight: 800; color: #60a5fa;">📐 Fórmula ${idx+1}: ${h.formula_name}</span>
+                                <span style="font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: rgba(16, 185, 129, 0.2); color: #34d399;">
+                                    Retención: ${h.score}/100 · ${h.band}
+                                </span>
+                            </div>
+                            <div id="hook-script-${idx}" style="font-size: 13px; font-style: italic; color: #f1f5f9; line-height: 1.5; margin-bottom: 8px;">
+                                "${h.script}"
+                            </div>
+                            <div style="display: flex; justify-content: flex-end;">
+                                <button onclick="copyElementText('hook-script-${idx}', 'Guión de gancho copiado')" class="btn-copy-code" style="font-size: 11px;">
+                                    📋 Copiar este Gancho
+                                </button>
+                            </div>
+                        `;
+                        hooksList.appendChild(item);
+                    });
+                }
+
+                const elHookText = document.getElementById('m-hook-text');
+                if (elHookText) elHookText.innerText = `"${adapt.hook_15s || ''}"`;
+
+                // Render pestaña monetización
+                const elMonet = document.getElementById('m-monetization-desc');
+                if (elMonet) elMonet.innerText = adapt.monetization_strategy || '';
+
+                const outlineList = document.getElementById('m-outline-list');
+                if (outlineList) {
+                    outlineList.innerHTML = '';
+                    (adapt.outline_20min || []).forEach(step => {
+                        const li = document.createElement('li');
+                        li.innerText = step;
+                        outlineList.appendChild(li);
+                    });
+                }
+
+                // Render pestaña producción de video (Herramientas y Prompts Maestros)
+                const prod = adapt.video_production || {};
+                
+                // 1. Grid de herramientas
+                const toolsGrid = document.getElementById('m-tools-grid');
+                if (toolsGrid) {
+                    toolsGrid.innerHTML = '';
+                    (prod.recommended_tools || []).forEach(t => {
+                        const card = document.createElement('div');
+                        card.style.cssText = 'background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 10px; border-radius: 8px;';
+                        card.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-size: 13px; font-weight: 800; color: #fff;">${t.name}</span>
+                                <span style="font-size: 9px; font-weight: 800; background: rgba(168, 85, 247, 0.2); color: #c084fc; padding: 2px 6px; border-radius: 4px;">${t.badge}</span>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">${t.role}</div>
+                            <a href="${t.url}" target="_blank" class="btn-copy-code" style="font-size: 10px; padding: 4px 8px; text-decoration: none; display: inline-block;">Abrir ${t.name} ↗</a>
+                        `;
+                        toolsGrid.appendChild(card);
+                    });
+                }
+
+                // 2. InVideo prompt
+                const elInvideo = document.getElementById('m-invideo-prompt');
+                if (elInvideo) elInvideo.innerText = prod.invideo_master_prompt || '';
+
+                // 3. Script prompt
+                const elScript = document.getElementById('m-script-master-prompt');
+                if (elScript) elScript.innerText = prod.script_master_prompt || '';
+
+                // 4. ElevenLabs
+                const elEleven = document.getElementById('m-elevenlabs-box');
+                if (elEleven && prod.elevenlabs_guide) {
+                    const g = prod.elevenlabs_guide;
+                    elEleven.innerHTML = `
+                        <div><b>🎙️ Voz Recomendada:</b> <span style="color: #facc15;">${g.voice_preset}</span></div>
+                        <div><b>🎚️ Estabilidad:</b> ${g.stability} | <b>Claridad / Similitud:</b> ${g.similarity}</div>
+                        <div><b>⚡ Velocidad de lectura:</b> ${g.speed}</div>
+                        <div style="margin-top: 6px; font-size: 11px; color: var(--text-muted);">💡 <b>Consejo:</b> ${g.notes}</div>
+                    `;
+                }
+
+                // 5. B-Roll scenes
+                const brollList = document.getElementById('m-broll-scenes-list');
+                if (brollList) {
+                    brollList.innerHTML = '';
+                    (prod.broll_scenes || []).forEach((sc, i) => {
+                        const row = document.createElement('div');
+                        row.style.cssText = 'background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 8px 12px; font-size: 12px;';
+                        row.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-weight: 800; color: #fb7185;">Escena ${i+1} (${sc.timestamp}) · Cámara: ${sc.camera}</span>
+                                <button onclick="copyText('${sc.prompt.replace(/'/g, "\\'")}', 'Prompt de escena copiado')" class="btn-copy-code" style="font-size: 10px; padding: 2px 8px;">📋 Copiar</button>
+                            </div>
+                            <div style="color: #94a3b8; font-family: monospace; font-size: 11px;">"${sc.prompt}"</div>
+                        `;
+                        brollList.appendChild(row);
+                    });
+                }
+            } catch (e) {
+                console.warn("Aviso al adaptar video:", e);
+                if (elPromptInput) {
+                    elPromptInput.value = `Cinematic 16:9 YouTube thumbnail about "${video.title}", high CTR composition, dramatic lighting`;
+                }
+            }
+        }
+
+        // TABS DENTRO DEL MODAL
+        function switchModalTab(tabId, btnEl) {
+            document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            
+            const target = document.getElementById(tabId);
+            if (target) target.classList.add('active');
+            if (btnEl) btnEl.classList.add('active');
+        }
+
+        // ABRIR MODAL DE TRANSCRIPCIÓN OFICIAL
+        async function openTranscriptModal(indexOrId, maybeTitle) {
+            let videoId = indexOrId;
+            let title = maybeTitle || '';
+            if (typeof indexOrId === 'number' && currentVideos[indexOrId]) {
+                videoId = currentVideos[indexOrId].video_id;
+                title = currentVideos[indexOrId].title;
+            }
+
+            const modal = document.getElementById('modal-transcript');
+            const elSub = document.getElementById('m-transcript-subtitle');
+            if (elSub) elSub.innerText = `Video: ${title}`;
+            const box = document.getElementById('transcript-full-text');
+            if (box) box.innerText = "Extrayendo transcripción oficial de YouTube...";
+            if (modal) modal.style.display = 'flex';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/transcript?video_id=${videoId}`);
+                const data = await res.json();
+
+                if (data.has_transcript) {
+                    activeTranscriptText = data.full_script;
+                    box.innerText = data.full_script;
+                } else {
+                    activeTranscriptText = "";
+                    box.innerText = data.error_msg || "No se encontraron subtítulos públicos para este video.";
+                }
+            } catch (e) {
+                box.innerText = "Error consultando los subtítulos del video.";
+            }
+        }
+
+        function downloadTranscriptTxt() {
+            if (!activeTranscriptText) {
+                showToast("No hay texto para descargar");
+                return;
+            }
+            const blob = new Blob([activeTranscriptText], { type: "text/plain;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `transcripcion_${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("Transcripción descargada (.txt)");
+        }
+
+        function showYoutubeChapters() {
+            if (!currentAdaptation?.youtube_chapters) {
+                showToast("Primero abre 'Clonar & Adaptar' para generar los capítulos");
+                return;
+            }
+            const box = document.getElementById('transcript-full-text');
+            if (box) {
+                box.innerText = "=== MARCAS DE TIEMPO OFICIALES LISTAS PARA COPIAR EN YOUTUBE (00:00) ===\n\n" + currentAdaptation.youtube_chapters;
+                showToast("Marcas de capítulos generadas");
+            }
+        }
+
+        // GUARDAR EN OBSIDIAN
+        async function saveCurrentAdaptationToObsidian() {
+            if (!currentSelectedVideo) return;
+            try {
+                const res = await fetch(API_BASE + '/api/favorites', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        video: currentSelectedVideo,
+                        adaptation: currentAdaptation
+                    })
+                });
+                const data = await res.json();
+                showToast(data.message || "Guardado en Obsidian con éxito");
+                closeModal('modal-cloner');
+            } catch (e) {
+                showToast("Error guardando en Obsidian");
+            }
+        }
+
+        async function quickSaveFavorite(index) {
+            const video = currentVideos[index];
+            if (!video) return;
+            try {
+                const res = await fetch(API_BASE + '/api/favorites', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({video: video})
+                });
+                const data = await res.json();
+                showToast(`⭐ "${video.title.substring(0, 30)}..." guardado en Obsidian`);
+            } catch (e) {
+                showToast("Error guardando en Obsidian");
+            }
+        }
+
+        async function loadFavorites() {
+            const grid = document.getElementById('favorites-grid');
+            grid.innerHTML = '<div style="color: var(--text-muted); padding: 20px;">Cargando videos guardados...</div>';
+            try {
+                const res = await fetch(API_BASE + '/api/favorites');
+                const favs = await res.json();
+                if (favs.length === 0) {
+                    grid.innerHTML = '<div style="color: var(--text-muted); padding: 40px; text-align: center; grid-column: 1/-1;">No tienes videos guardados aún. Haz clic en la estrella ⭐ de cualquier video para guardarlo en Obsidian.</div>';
+                    return;
+                }
+                const videos = favs.map(f => f.video).filter(Boolean);
+                renderVideos(videos, grid);
+            } catch (e) {
+                grid.innerHTML = '<div style="color: red; padding: 20px;">Error al cargar favoritos.</div>';
+            }
+        }
+
+        // UTILIDADES
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function copyElementText(elementId, msg) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text);
+            showToast(msg || "Copiado al portapapeles");
+        }
+
+        function copyText(text, msg) {
+            navigator.clipboard.writeText(text);
+            showToast(msg || "Copiado al portapapeles");
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 3000);
+        }
+    </script>
+</body>
+</html>

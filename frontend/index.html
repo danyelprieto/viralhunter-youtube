@@ -1319,7 +1319,7 @@
                         </button>
                     </div>
                     <div style="margin-top: 10px; font-size: 11px; color: var(--text-dim); line-height: 1.5;">
-                        ℹ️ "Clonar Tal Cual" recrea la miniatura usando la original como referencia (imagen a imagen) y el prompt completo: descripción visual + sujeto + fondo + paleta + dirección de arte + título del video + texto en español. Queda muy parecida, no idéntica al píxel. "Solo cambiar colores" deja la misma miniatura y le combina varios cambios sutiles a la vez (color + luz + tono), y sale SIN título. Para una copia exacta, usa "📥 Descargar Original HD" y edítale solo el texto.
+                        ℹ️ "Clonar Tal Cual" recrea la miniatura usando la original como referencia (imagen a imagen) con el modelo gratuito de Cloudflare y el prompt completo: descripción visual + sujeto + fondo + paleta + dirección de arte + título del video + texto en español. Queda muy parecida, no idéntica al píxel. "Solo cambiar colores" deja la misma miniatura y le combina varios cambios sutiles a la vez (color + luz + tono), y sale SIN título; si la IA no responde, el cambio de color se aplica directo en tu navegador, sin gastar saldo. El texto largo ya no se corta: se achica y se parte en líneas. Para una copia exacta, usa "📥 Descargar Original HD" y edítale solo el texto.
                     </div>
                 </div>
 
@@ -1517,6 +1517,10 @@
 
     <script>
         let currentVideos = [];
+        // Base del backend: en GitHub Pages la página es estática y el
+        // backend vive en Render; en Render mismo se usa ruta relativa.
+        const API_BASE = (window.location.hostname || '').endsWith('github.io')
+            ? 'https://viralhunter-youtube.onrender.com' : '';
         let currentSelectedVideo = null;
         let currentAdaptation = null;
         let activeTranscriptText = "";
@@ -1594,7 +1598,7 @@
             }
             let imgDataUrl = currentSelectedVideo.maxres_thumbnail_url || currentSelectedVideo.thumbnail_url || "";
             try {
-                const proxyRes = await fetch(`/api/thumbnail-proxy?video_id=${videoId}`);
+                const proxyRes = await fetch(`${API_BASE}/api/thumbnail-proxy?video_id=${videoId}`);
                 if (proxyRes.ok) {
                     const pData = await proxyRes.json();
                     if (pData.data_url) imgDataUrl = pData.data_url;
@@ -1605,6 +1609,66 @@
             currentOriginalThumbDataUrl = imgDataUrl;
             currentOriginalThumbVideoId = videoId;
             return imgDataUrl;
+        }
+
+        // Modelos de edición GRATUITOS (Cloudflare, la misma familia del
+        // FLUX.1 Schnell que usaba la app antes sin saldo). GPT Image 2 y
+        // Nano Banana son DE PAGO en Puter (modelo User-Pays: cada usuario
+        // paga su uso) y con la cuenta sin saldo Puter muestra el aviso
+        // "Low Balance" y la generación falla. Por eso el clonado ya NO los
+        // usa: prueba FLUX.2 Dev de Cloudflare, que sí acepta una imagen de
+        // referencia, y si falla cae al Schnell gratuito por texto.
+        const EDIT_MODELS = ["@cf/black-forest-labs/flux-2-dev"];
+        function isInsufficientFundsError(err) {
+            const msg = ((err && err.message) || "") + " " + ((err && err.code) || "") + " " + ((err && err.errorCode) || "");
+            return /insufficient_funds|insufficient funds|low balance|funding/i.test(msg);
+        }
+        async function generateWithEditModels(prompt, refImage) {
+            for (const modelId of EDIT_MODELS) {
+                try {
+                    const imgEl = await puter.ai.txt2img({
+                        prompt,
+                        model: modelId,
+                        input_image: refImage,
+                        ratio: { w: 16, h: 9 }
+                    });
+                    if (imgEl && imgEl.src) return imgEl;
+                } catch (errEdit) {
+                    console.warn(`Modelo de edición ${modelId} falló:`, errEdit);
+                    if (isInsufficientFundsError(errEdit)) break; // sin saldo: no insistir
+                }
+            }
+            return null;
+        }
+
+        // Variación de color LOCAL (sin IA): si la edición con IA falla, se
+        // aplica el cambio de color directamente sobre la miniatura original
+        // en el canvas (giro de tono + saturación + contraste). Es gratis,
+        // instantáneo y conserva la imagen exacta, solo con otros colores.
+        // Guarda el resultado como imagen generada para que "Aplicar texto"
+        // no restaure la original sin el cambio. Devuelve true si se aplicó.
+        async function applyLocalColorShift(refImageDataUrl) {
+            return new Promise((resolve) => {
+                const canvas = document.getElementById('canvas-ai-thumb');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    const hue = [18, -22, 32, -35, 12][Math.floor(Math.random() * 5)];
+                    const sat = [1.3, 1.35, 0.85, 1.15, 1.25][Math.floor(Math.random() * 5)];
+                    const con = [1.08, 1.12, 1.05, 0.95, 1.1][Math.floor(Math.random() * 5)];
+                    ctx.clearRect(0, 0, 1280, 720);
+                    ctx.filter = `hue-rotate(${hue}deg) saturate(${sat}) contrast(${con})`;
+                    ctx.drawImage(img, 0, 0, 1280, 720);
+                    ctx.filter = 'none';
+                    const snap = new Image();
+                    snap.onload = () => { currentGeneratedImage = snap; resolve(true); };
+                    snap.onerror = () => resolve(true);
+                    snap.src = canvas.toDataURL('image/jpeg', 0.95);
+                };
+                img.onerror = () => resolve(false);
+                img.src = refImageDataUrl;
+            });
         }
 
         function restoreOriginalPrompt() {
@@ -1770,49 +1834,32 @@
 
             try {
                 let imgEl;
-                // CLONADO EXACTO: imagen a imagen. Antes se llamaba a FLUX.1
-                // Schnell solo con texto, y Schnell además RECHAZA imágenes de
-                // entrada (docs de Puter/Cloudflare), así que la "copia" salía
-                // inventada. Ahora se pasa la miniatura original como
-                // input_image a un modelo de edición (gpt-image-2 y, si falla,
-                // Nano Banana de Gemini), con ratio 16:9 para no deformarla
-                // al estirarla al canvas. Si no hay imagen de referencia o
-                // fallan los dos modelos, se cae al camino viejo de solo texto
-                // y se avisa: esa recreación NO quedará igual a la original.
+                // CLONADO EXACTO: imagen a imagen con un modelo de edición
+                // GRATUITO (FLUX.2 Dev de Cloudflare, que acepta imagen de
+                // referencia). Antes se usaban GPT Image 2 y Nano Banana, que
+                // son DE PAGO en Puter y con la cuenta sin saldo mostraban el
+                // aviso "Low Balance". FLUX.1 Schnell no sirve para esto
+                // porque RECHAZA imágenes de entrada (docs de Puter).
+                // Si no hay imagen de referencia o el modelo gratuito falla,
+                // se cae al camino viejo de solo texto con Schnell y se avisa:
+                // esa recreación NO quedará igual a la original.
                 let usedTextOnlyFallback = false;
-                const editModels = ["gpt-image-2", "gemini-nano-banana-2.1"];
                 if (isExact) {
                     const refImage = await getOriginalThumbnailDataUrl();
                     const editPrompt = "Recreate this exact YouTube thumbnail image as faithfully as possible from the input image: keep the same subject, face, facial expression, pose, clothing, background, composition, framing, lighting and color palette. Do not add, remove, move or restyle any element. Do not add any text. Details to preserve: " + promptText;
-                    let lastErr = null;
                     if (refImage) {
-                        for (const modelId of editModels) {
-                            try {
-                                imgEl = await puter.ai.txt2img({
-                                    prompt: editPrompt,
-                                    model: modelId,
-                                    input_image: refImage,
-                                    ratio: { w: 16, h: 9 }
-                                });
-                                if (imgEl && imgEl.src) break;
-                            } catch (errEdit) {
-                                console.warn(`Modelo de edición ${modelId} falló, probando el siguiente:`, errEdit);
-                                lastErr = errEdit;
-                                imgEl = null;
-                            }
-                        }
+                        imgEl = await generateWithEditModels(editPrompt, refImage);
                     }
                     if (!imgEl || !imgEl.src) {
-                        console.warn("Clonado con referencia no disponible, cayendo a solo texto:", lastErr);
+                        console.warn("Clonado con referencia no disponible, cayendo a solo texto.");
                         usedTextOnlyFallback = true;
                     }
                 } else {
                     // VARIACIÓN SOLO DE COLORES: también imagen a imagen con
-                    // la original como referencia, pero la única instrucción es
-                    // un cambio sutil de paleta (una dirección distinta en cada
-                    // clic). Nada de regenerar por texto: eso cambiaba sujeto,
-                    // pose y composición. Si la edición falla, NO se genera una
-                    // imagen distinta por texto; se avisa y se reintenta.
+                    // la original como referencia, con tres cambios sutiles
+                    // (color + luz + tono). Si la edición con IA falla, NO se
+                    // genera una imagen distinta por texto: se aplica el
+                    // cambio de color LOCAL sobre la original (gratis, exacto).
                     const refImage = await getOriginalThumbnailDataUrl();
                     if (!refImage) {
                         throw new Error("No se pudo cargar la miniatura original como referencia para variar sus colores.");
@@ -1821,24 +1868,19 @@
                     const lightTweak = LIGHT_TWEAKS[Math.floor(Math.random() * LIGHT_TWEAKS.length)];
                     const toneTweak = TONE_TWEAKS[Math.floor(Math.random() * TONE_TWEAKS.length)];
                     const colorPrompt = "Edit this exact YouTube thumbnail image with ONLY subtle changes, combining these three tweaks: (1) color: " + colorDir + "; (2) light: " + lightTweak + "; (3) tone: " + toneTweak + ". Remove ALL text, words and lettering from the image completely, reconstructing cleanly the areas where the text was, so the result has no text at all. Keep everything else exactly the same: same subject, face, facial expression, pose, clothing, background, composition, framing and layout. Do not add, remove, move or restyle any other element. Details to preserve: " + promptText;
-                    let lastErr = null;
-                    for (const modelId of editModels) {
-                        try {
-                            imgEl = await puter.ai.txt2img({
-                                prompt: colorPrompt,
-                                model: modelId,
-                                input_image: refImage,
-                                ratio: { w: 16, h: 9 }
-                            });
-                            if (imgEl && imgEl.src) break;
-                        } catch (errEdit) {
-                            console.warn(`Modelo de edición ${modelId} falló en variación de color, probando el siguiente:`, errEdit);
-                            lastErr = errEdit;
-                            imgEl = null;
-                        }
-                    }
+                    imgEl = await generateWithEditModels(colorPrompt, refImage);
                     if (!imgEl || !imgEl.src) {
-                        throw new Error("No se pudo aplicar la variación de color con la imagen original como referencia. Reintenta en unos segundos. (" + (lastErr && lastErr.message ? lastErr.message : "sin referencia") + ")");
+                        const okLocal = await applyLocalColorShift(refImage);
+                        if (okLocal) {
+                            placeholder.style.display = 'none';
+                            overlayBox.style.display = 'flex';
+                            statusBox.style.display = 'none';
+                            if (btnExact) btnExact.disabled = false;
+                            if (btnMod) btnMod.disabled = false;
+                            showToast("La IA no respondió; se aplicó el cambio de color directo sobre tu miniatura (sin IA).");
+                            return;
+                        }
+                        throw new Error("No se pudo aplicar la variación de color con la imagen original como referencia. Reintenta en unos segundos.");
                     }
                 }
                 if (!imgEl || !imgEl.src) {
@@ -1921,27 +1963,62 @@
 
             if (!text) return;
 
-            ctx.font = '900 78px "Plus Jakarta Sans", Impact, sans-serif';
+            // Ajuste automático: antes el texto era siempre 78px en una sola
+            // línea y los títulos largos se cortaban por los lados (se veía
+            // "SIFICADOR QUE ENGAÑÓ A LOS" sin el principio ni el final).
+            // Ahora se achica la fuente y se parte en líneas hasta que quepa
+            // dentro del canvas (máx. 3 líneas).
+            const maxWidth = 1280 * 0.92;
+            const fontFor = (size) => `900 ${size}px "Plus Jakarta Sans", Impact, sans-serif`;
+            const wrapLines = (size) => {
+                ctx.font = fontFor(size);
+                const words = text.split(/\s+/);
+                const lines = [];
+                let line = "";
+                for (const word of words) {
+                    const test = line ? line + " " + word : word;
+                    if (ctx.measureText(test).width <= maxWidth || !line) {
+                        line = test;
+                    } else {
+                        lines.push(line);
+                        line = word;
+                    }
+                }
+                if (line) lines.push(line);
+                return lines;
+            };
+            let fontSize = 78;
+            let lines = wrapLines(fontSize);
+            while (lines.length > 3 && fontSize > 28) {
+                fontSize -= 6;
+                lines = wrapLines(fontSize);
+            }
+            ctx.font = fontFor(fontSize);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
             const color = document.getElementById('ai-text-color').value || '#FACC15';
             const position = document.getElementById('ai-text-pos').value || 'bottom';
 
-            let y = 620;
-            if (position === 'center') y = 360;
-            if (position === 'top') y = 120;
+            const lineHeight = fontSize * 1.08;
+            const blockHeight = lines.length * lineHeight;
+            let blockTop = 700 - blockHeight; // abajo
+            if (position === 'center') blockTop = 360 - blockHeight / 2;
+            if (position === 'top') blockTop = 90;
 
             const x = 640;
 
             ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 18;
+            ctx.lineWidth = Math.max(8, Math.round(fontSize * 0.23));
             ctx.lineJoin = 'miter';
             ctx.miterLimit = 2;
-            ctx.strokeText(text, x, y);
-
             ctx.fillStyle = color;
-            ctx.fillText(text, x, y);
+
+            lines.forEach((line, i) => {
+                const y = blockTop + lineHeight * (i + 0.5);
+                ctx.strokeText(line, x, y);
+                ctx.fillText(line, x, y);
+            });
 
             showToast("Texto aplicado a la miniatura");
         }
@@ -1965,7 +2042,7 @@
             const overlay = document.getElementById('ai-overlay-text').value;
 
             try {
-                const res = await fetch('/api/save-generated-thumbnail', {
+                const res = await fetch(API_BASE + '/api/save-generated-thumbnail', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -2007,7 +2084,7 @@
         async function loadNichesCatalog() {
             const container = document.getElementById('niches-container');
             try {
-                const res = await fetch('/api/niches');
+                const res = await fetch(API_BASE + '/api/niches');
                 const niches = await res.json();
 
                 container.innerHTML = '';
@@ -2082,7 +2159,7 @@
             const timeoutId = setTimeout(() => controller.abort(), 25000);
 
             try {
-                const url = `/api/search?q=${encodeURIComponent(query)}&max_subs=${maxSubs}&min_duration=${minDuration}&min_views=${minViews}&date_filter=${dateFilter}&sort_by=${sortBy}&limit=40`;
+                const url = `${API_BASE}/api/search?q=${encodeURIComponent(query)}&max_subs=${maxSubs}&min_duration=${minDuration}&min_views=${minViews}&date_filter=${dateFilter}&sort_by=${sortBy}&limit=40`;
                 const res = await fetch(url, { signal: controller.signal });
                 clearTimeout(timeoutId);
                 const data = await res.json();
@@ -2242,7 +2319,7 @@
             if (elPromptInput) elPromptInput.value = "Generando fórmula psicológica de empaquetado...";
 
             try {
-                const res = await fetch('/api/adapt', {
+                const res = await fetch(API_BASE + '/api/adapt', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({video: video})
@@ -2468,7 +2545,7 @@
             if (modal) modal.style.display = 'flex';
 
             try {
-                const res = await fetch(`/api/transcript?video_id=${videoId}`);
+                const res = await fetch(`${API_BASE}/api/transcript?video_id=${videoId}`);
                 const data = await res.json();
 
                 if (data.has_transcript) {
@@ -2514,7 +2591,7 @@
         async function saveCurrentAdaptationToObsidian() {
             if (!currentSelectedVideo) return;
             try {
-                const res = await fetch('/api/favorites', {
+                const res = await fetch(API_BASE + '/api/favorites', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -2534,7 +2611,7 @@
             const video = currentVideos[index];
             if (!video) return;
             try {
-                const res = await fetch('/api/favorites', {
+                const res = await fetch(API_BASE + '/api/favorites', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({video: video})
@@ -2550,7 +2627,7 @@
             const grid = document.getElementById('favorites-grid');
             grid.innerHTML = '<div style="color: var(--text-muted); padding: 20px;">Cargando videos guardados...</div>';
             try {
-                const res = await fetch('/api/favorites');
+                const res = await fetch(API_BASE + '/api/favorites');
                 const favs = await res.json();
                 if (favs.length === 0) {
                     grid.innerHTML = '<div style="color: var(--text-muted); padding: 40px; text-align: center; grid-column: 1/-1;">No tienes videos guardados aún. Haz clic en la estrella ⭐ de cualquier video para guardarlo en Obsidian.</div>';
