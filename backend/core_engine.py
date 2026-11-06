@@ -7,10 +7,14 @@ Sin cuotas de API keys · Scraping concurrente y análisis en tiempo real
 import urllib.request
 import re
 import time
+import socket
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, Optional
 import scrapetube
 from youtube_transcript_api import YouTubeTranscriptApi
+
+# Forzar timeout global estricto para evitar bloqueos en servidores en la nube
+socket.setdefaulttimeout(3.0)
 
 # Caché en memoria de suscriptores para no repetir requests al mismo canal
 CHANNEL_SUBS_CACHE: Dict[str, int] = {}
@@ -234,14 +238,16 @@ def fetch_single_channel_subscribers(channel_handle_or_url: str) -> int:
         url,
         headers={
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9'
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cookie': 'SOCS=CAESEwgDEgk2MTQ5Mjc4NjcaAmVuIAEaBgiA_LyaBg;'
         }
     )
 
     subs = 15000
     try:
         with urllib.request.urlopen(req, timeout=2.5) as resp:
-            html = resp.read().decode('utf-8', errors='ignore')
+            # Leer solo los primeros 128 KB para no bloquear hilos en la nube
+            html = resp.read(131072).decode('utf-8', errors='ignore')
             m = re.search(r'([0-9\.,]+[KMBkmb]?)\s*(?:subscribers|suscriptores)', html, re.IGNORECASE)
             if m:
                 subs = parse_subs_string(m.group(1))
@@ -256,12 +262,12 @@ def fetch_single_channel_subscribers(channel_handle_or_url: str) -> int:
     return subs
 
 def resolve_subscribers_in_parallel(channel_handles: List[str]) -> Dict[str, int]:
-    """Resuelve en paralelo los suscriptores de múltiples canales con ThreadPool."""
+    """Resuelve en paralelo los suscriptores de múltiples canales con ThreadPool acotado."""
     unique_handles = list(set(h for h in channel_handles if h))
-    needed = [h for h in unique_handles if h not in CHANNEL_SUBS_CACHE]
+    needed = [h for h in unique_handles if h not in CHANNEL_SUBS_CACHE][:8]
     
     if needed:
-        with ThreadPoolExecutor(max_workers=min(len(needed), 12)) as executor:
+        with ThreadPoolExecutor(max_workers=min(len(needed), 4)) as executor:
             executor.map(fetch_single_channel_subscribers, needed)
 
     return {h: CHANNEL_SUBS_CACHE.get(h, 15000) for h in unique_handles}

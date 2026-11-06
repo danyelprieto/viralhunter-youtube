@@ -1861,9 +1861,13 @@
             grid.innerHTML = '';
             status.innerText = `Consultando YouTube con filtros avanzados...`;
 
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 25000);
+
             try {
                 const url = `/api/search?q=${encodeURIComponent(query)}&max_subs=${maxSubs}&min_duration=${minDuration}&min_views=${minViews}&date_filter=${dateFilter}&sort_by=${sortBy}&limit=40`;
-                const res = await fetch(url);
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
                 const data = await res.json();
 
                 currentVideos = data.results || [];
@@ -1876,9 +1880,15 @@
                 }
                 renderVideos(currentVideos, grid);
             } catch (e) {
+                clearTimeout(timeoutId);
                 loading.style.display = 'none';
-                status.innerText = `Error al consultar videos.`;
-                showToast("Error conectando con el servidor");
+                if (e.name === 'AbortError') {
+                    status.innerHTML = `<div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; padding: 12px 16px; border-radius: 10px; font-size: 13px;">⚠️ El servidor tardó más de 25 segundos en responder. Por favor reintenta la búsqueda o reduce los filtros.</div>`;
+                    showToast("Tiempo de espera agotado");
+                } else {
+                    status.innerText = `Error al consultar videos.`;
+                    showToast("Error conectando con el servidor");
+                }
             }
         }
 

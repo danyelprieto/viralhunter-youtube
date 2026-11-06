@@ -48,6 +48,22 @@ if not os.path.exists(FAVORITES_FILE):
 
 # --- ENDPOINTS API ---
 
+@app.get("/api/debug-ping")
+def debug_ping():
+    import time
+    import scrapetube
+    t0 = time.time()
+    try:
+        gen = scrapetube.get_search("stoic", results_type="video")
+        first = next(gen)
+        t1 = time.time()
+        title = ""
+        if "title" in first and "runs" in first["title"] and len(first["title"]["runs"]) > 0:
+            title = first["title"]["runs"][0].get("text", "")
+        return {"ok": True, "scrapetube_seconds": round(t1 - t0, 2), "sample_title": title}
+    except Exception as e:
+        return {"ok": False, "error": str(e), "scrapetube_seconds": round(time.time() - t0, 2)}
+
 @app.get("/api/niches")
 def api_get_niches():
     """Devuelve el catálogo de nichos ganadores de alto RPM y baja saturación."""
