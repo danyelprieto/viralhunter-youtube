@@ -1320,7 +1320,7 @@
                         </button>
                     </div>
                     <div style="margin-top: 10px; font-size: 11px; color: var(--text-dim); line-height: 1.5;">
-                        ℹ️ "Clonar Tal Cual" recrea la miniatura usando la original como referencia (imagen a imagen) con el modelo gratuito de Cloudflare y el prompt completo: descripción visual + sujeto + fondo + paleta + dirección de arte + título del video + texto en español. Queda muy parecida, no idéntica al píxel. "Solo cambiar colores" deja la misma miniatura y le combina varios cambios sutiles a la vez (color + luz + tono), y sale SIN título; si la IA no responde, el cambio de color se aplica directo en tu navegador, sin gastar saldo. El texto largo ya no se corta: se achica y se parte en líneas. Para una copia exacta, usa "📥 Descargar Original HD" y edítale solo el texto.
+                        ℹ️ Todo gratis, sin cuenta ni saldo: "Clonar Tal Cual" recrea la miniatura usando la original como referencia (imagen a imagen, FLUX por Pollinations) con el prompt completo: descripción visual + sujeto + fondo + paleta + dirección de arte + título del video + texto en español. Queda muy parecida, no idéntica al píxel, y trae una marca pequeña de Pollinations abajo a la derecha (se puede recortar). "Solo cambiar colores" deja la misma miniatura y le combina varios cambios sutiles a la vez (color + luz + tono), y sale SIN título. Si la IA gratis no responde, el cambio se aplica directo en tu navegador, y el clonado exacto te deja tu miniatura original con el título en español encima: el lienzo nunca queda vacío. El texto largo ya no se corta: se achica y se parte en líneas.
                     </div>
                 </div>
 
@@ -1612,34 +1612,64 @@
             return imgDataUrl;
         }
 
-        // Modelos de edición GRATUITOS (Cloudflare, la misma familia del
-        // FLUX.1 Schnell que usaba la app antes sin saldo). GPT Image 2 y
-        // Nano Banana son DE PAGO en Puter (modelo User-Pays: cada usuario
-        // paga su uso) y con la cuenta sin saldo Puter muestra el aviso
-        // "Low Balance" y la generación falla. Por eso el clonado ya NO los
-        // usa: prueba FLUX.2 Dev de Cloudflare, que sí acepta una imagen de
-        // referencia, y si falla cae al Schnell gratuito por texto.
-        const EDIT_MODELS = ["@cf/black-forest-labs/flux-2-dev"];
-        function isInsufficientFundsError(err) {
-            const msg = ((err && err.message) || "") + " " + ((err && err.code) || "") + " " + ((err && err.errorCode) || "");
-            return /insufficient_funds|insufficient funds|low balance|funding/i.test(msg);
-        }
-        async function generateWithEditModels(prompt, refImage) {
-            for (const modelId of EDIT_MODELS) {
-                try {
-                    const imgEl = await puter.ai.txt2img({
-                        prompt,
-                        model: modelId,
-                        input_image: refImage,
-                        ratio: { w: 16, h: 9 }
-                    });
-                    if (imgEl && imgEl.src) return imgEl;
-                } catch (errEdit) {
-                    console.warn(`Modelo de edición ${modelId} falló:`, errEdit);
-                    if (isInsufficientFundsError(errEdit)) break; // sin saldo: no insistir
-                }
+        // GENERACIÓN GRATIS (sin cuenta, sin saldo, sin aviso "Low
+        // Balance"): Pollinations.ai, API abierta y gratuita (modelo FLUX,
+        // Classic API anónima, límite 1 petición cada 15 s). GPT Image 2,
+        // Nano Banana y FLUX.2 Dev son DE PAGO en Puter (User-Pays) y con
+        // la cuenta sin saldo muestran el aviso "Low Balance", así que el
+        // clonado YA NO USA PUTER PARA IMÁGENES DE EDICIÓN. Verificado por
+        // curl el 2026-11-05: flux + image= (miniatura pública como
+        // referencia) devuelve JPEG en ~5 s, con
+        // Access-Control-Allow-Origin: * (el canvas no se contamina). El
+        // modelo "kontext" NO está en la API gratuita (403: requiere pollen
+        // key), por eso se usa flux. Devuelve un <img> con la imagen
+        // generada, o null si falla.
+        async function generateWithPollinations(prompt, refImageUrl) {
+            const seed = Math.floor(Math.random() * 1000000);
+            const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt)
+                + "?model=flux&image=" + encodeURIComponent(refImageUrl)
+                + "&width=1280&height=720&seed=" + seed;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 120000);
+            try {
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.status === 429) throw new Error("Pollinations solo permite 1 imagen cada 15 segundos: espera un poco y reintenta.");
+                if (!res.ok) throw new Error("Pollinations devolvió HTTP " + res.status);
+                const blob = await res.blob();
+                if (!blob.type.startsWith("image/")) throw new Error("Pollinations no devolvió una imagen.");
+                const img = new Image();
+                img.src = URL.createObjectURL(blob);
+                return img;
+            } catch (err) {
+                clearTimeout(timeoutId);
+                console.warn("Pollinations falló:", err);
+                return null;
             }
-            return null;
+        }
+
+        // Clonado exacto LOCAL (sin IA): dibuja la miniatura original tal
+        // cual en el canvas y la guarda como imagen generada. Es el último
+        // recurso del clonado exacto: si no hay IA gratis disponible, el
+        // usuario se queda con su miniatura original (fiel al píxel) y el
+        // título en español encima, en vez de un lienzo vacío.
+        async function applyLocalExactClone(refImageDataUrl) {
+            return new Promise((resolve) => {
+                const canvas = document.getElementById('canvas-ai-thumb');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    ctx.clearRect(0, 0, 1280, 720);
+                    ctx.drawImage(img, 0, 0, 1280, 720);
+                    const snap = new Image();
+                    snap.onload = () => { currentGeneratedImage = snap; resolve(true); };
+                    snap.onerror = () => resolve(true);
+                    snap.src = canvas.toDataURL('image/jpeg', 0.95);
+                };
+                img.onerror = () => resolve(false);
+                img.src = refImageDataUrl;
+            });
         }
 
         // Variación de color LOCAL (sin IA): si la edición con IA falla, se
@@ -1835,43 +1865,46 @@
 
             try {
                 let imgEl;
-                // CLONADO EXACTO: imagen a imagen con un modelo de edición
-                // GRATUITO (FLUX.2 Dev de Cloudflare, que acepta imagen de
-                // referencia). Antes se usaban GPT Image 2 y Nano Banana, que
-                // son DE PAGO en Puter y con la cuenta sin saldo mostraban el
-                // aviso "Low Balance". FLUX.1 Schnell no sirve para esto
-                // porque RECHAZA imágenes de entrada (docs de Puter).
-                // Si no hay imagen de referencia o el modelo gratuito falla,
-                // se cae al camino viejo de solo texto con Schnell y se avisa:
-                // esa recreación NO quedará igual a la original.
+                // CLONADO EXACTO: imagen a imagen GRATIS con Pollinations
+                // (FLUX, sin cuenta ni saldo) usando la URL pública de la
+                // miniatura como referencia. Si Pollinations falla, se cae al
+                // camino viejo de solo texto con Schnell (el único modelo de
+                // Puter que funcionó sin saldo) y se avisa: esa recreación NO
+                // quedará igual a la original. Si también falla Schnell, el
+                // último recurso es la miniatura original tal cual con el
+                // título en español encima (ver abajo): el lienzo nunca
+                // queda vacío.
                 let usedTextOnlyFallback = false;
+                let refImage = null; // miniatura original en base64, para los respaldos locales
                 if (isExact) {
-                    const refImage = await getOriginalThumbnailDataUrl();
+                    const refUrl = currentSelectedVideo ? (currentSelectedVideo.maxres_thumbnail_url || currentSelectedVideo.thumbnail_url || "") : "";
                     const editPrompt = "Recreate this exact YouTube thumbnail image as faithfully as possible from the input image: keep the same subject, face, facial expression, pose, clothing, background, composition, framing, lighting and color palette. Do not add, remove, move or restyle any element. Do not add any text. Details to preserve: " + promptText;
-                    if (refImage) {
-                        imgEl = await generateWithEditModels(editPrompt, refImage);
+                    if (refUrl) {
+                        imgEl = await generateWithPollinations(editPrompt, refUrl);
                     }
                     if (!imgEl || !imgEl.src) {
-                        console.warn("Clonado con referencia no disponible, cayendo a solo texto.");
+                        console.warn("Clonado gratis con referencia no disponible, cayendo a solo texto.");
                         usedTextOnlyFallback = true;
                     }
+                    refImage = await getOriginalThumbnailDataUrl();
                 } else {
                     // VARIACIÓN SOLO DE COLORES: también imagen a imagen con
                     // la original como referencia, con tres cambios sutiles
                     // (color + luz + tono). Si la edición con IA falla, NO se
                     // genera una imagen distinta por texto: se aplica el
                     // cambio de color LOCAL sobre la original (gratis, exacto).
-                    const refImage = await getOriginalThumbnailDataUrl();
-                    if (!refImage) {
+                    refImage = await getOriginalThumbnailDataUrl();
+                    const refUrl = currentSelectedVideo ? (currentSelectedVideo.maxres_thumbnail_url || currentSelectedVideo.thumbnail_url || "") : "";
+                    if (!refImage && !refUrl) {
                         throw new Error("No se pudo cargar la miniatura original como referencia para variar sus colores.");
                     }
                     const colorDir = COLOR_VARIATIONS[Math.floor(Math.random() * COLOR_VARIATIONS.length)];
                     const lightTweak = LIGHT_TWEAKS[Math.floor(Math.random() * LIGHT_TWEAKS.length)];
                     const toneTweak = TONE_TWEAKS[Math.floor(Math.random() * TONE_TWEAKS.length)];
                     const colorPrompt = "Edit this exact YouTube thumbnail image with ONLY subtle changes, combining these three tweaks: (1) color: " + colorDir + "; (2) light: " + lightTweak + "; (3) tone: " + toneTweak + ". Remove ALL text, words and lettering from the image completely, reconstructing cleanly the areas where the text was, so the result has no text at all. Keep everything else exactly the same: same subject, face, facial expression, pose, clothing, background, composition, framing and layout. Do not add, remove, move or restyle any other element. Details to preserve: " + promptText;
-                    imgEl = await generateWithEditModels(colorPrompt, refImage);
+                    imgEl = refUrl ? await generateWithPollinations(colorPrompt, refUrl) : null;
                     if (!imgEl || !imgEl.src) {
-                        const okLocal = await applyLocalColorShift(refImage);
+                        const okLocal = await applyLocalColorShift(refImage || refUrl);
                         if (okLocal) {
                             placeholder.style.display = 'none';
                             overlayBox.style.display = 'flex';
@@ -1892,10 +1925,37 @@
                             model: "black-forest-labs/FLUX.1-schnell"
                         });
                     } catch (errModel) {
-                        console.warn("Reintentando con modelo por defecto de Puter:", errModel);
-                        imgEl = await puter.ai.txt2img(fullPrompt);
+                        console.warn("Schnell falló, reintentando con el modelo por defecto de Puter:", errModel);
+                        try {
+                            imgEl = await puter.ai.txt2img(fullPrompt);
+                        } catch (errDefault) {
+                            console.warn("El modelo por defecto de Puter también falló:", errDefault);
+                            imgEl = null;
+                        }
                     }
                     if (isExact) usedTextOnlyFallback = true;
+                    // Último recurso del clonado exacto: si NINGUNA IA gratis
+                    // respondió, dejar la miniatura original tal cual (fiel
+                    // al píxel) con el título en español encima, en vez de
+                    // un lienzo vacío. La variación de colores no usa este
+                    // recurso: ya tiene su propio respaldo local.
+                    if ((!imgEl || !imgEl.src) && isExact && refImage) {
+                        const okExact = await applyLocalExactClone(refImage);
+                        if (okExact) {
+                            placeholder.style.display = 'none';
+                            overlayBox.style.display = 'flex';
+                            statusBox.style.display = 'none';
+                            if (btnExact) btnExact.disabled = false;
+                            if (btnMod) btnMod.disabled = false;
+                            const suggestedText = originalThumbText || currentAdaptation?.thumbnail_cloner?.hook_text || "";
+                            if (suggestedText) {
+                                document.getElementById('ai-overlay-text').value = suggestedText;
+                                applyOverlayText();
+                            }
+                            showToast("Sin IA gratis disponible en este momento: te dejé tu miniatura original con el título en español encima.");
+                            return;
+                        }
+                    }
                 }
 
                 if (imgEl && imgEl.src) {
@@ -1930,6 +1990,16 @@
                             document.getElementById('ai-overlay-text').value = suggestedText;
                             if (isExact) applyOverlayText();
                         }
+                    };
+                    tempImg.onerror = () => {
+                        statusBox.style.display = 'block';
+                        statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+                        statusBox.style.borderColor = '#ef4444';
+                        statusBox.style.color = '#fca5a5';
+                        statusBox.innerText = "La imagen generada no se pudo cargar. Reintenta en unos segundos.";
+                        if (btnExact) btnExact.disabled = false;
+                        if (btnMod) btnMod.disabled = false;
+                        showToast("Error cargando la imagen generada");
                     };
                     tempImg.src = imgEl.src;
                 } else {
