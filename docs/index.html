@@ -1223,21 +1223,21 @@
                     <!-- COLUMNA 2: ESTUDIO DE GENERACIÓN Y EDICIÓN CON IA -->
                     <div class="studio-column">
                         <div class="studio-col-title">
-                            <span>✨ Nueva Miniatura con IA (FLUX.1)</span>
+                            <span>✨ Nueva Miniatura</span>
                         </div>
 
                         <div class="ai-canvas-wrapper">
                             <canvas id="canvas-ai-thumb" width="1280" height="720"></canvas>
                             <div id="ai-thumb-placeholder" class="ai-canvas-placeholder">
                                 <div style="font-size: 36px; margin-bottom: 8px;">🎨</div>
-                                <div style="font-weight: 700; color: #fff; font-size: 14px;">Miniatura Recreada por IA</div>
-                                <div style="font-size: 12px; margin-top: 4px; max-width: 280px;">Pulsa "Clonar Tal Cual" para ver cómo queda fiel a la original, o cámbiale cosas por texto abajo.</div>
+                                <div style="font-weight: 700; color: #fff; font-size: 14px;">Tu miniatura lista</div>
+                                <div style="font-size: 12px; margin-top: 4px; max-width: 280px;">Pulsa "Original + título en español" para usar tu miniatura tal cual, con el título traducido encima.</div>
                             </div>
                         </div>
 
                         <!-- ESTADO DE GENERACIÓN -->
                         <div id="ai-gen-status" style="display: none; background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6; color: #93c5fd; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; text-align: center;">
-                            ⏳ Generando miniatura en 1280x720 con FLUX.1...
+                            ⏳ Preparando tu miniatura en 1280x720...
                         </div>
 
                         <!-- HERRAMIENTAS DE TEXTO VIRAL (OVERLAY) -->
@@ -1310,17 +1310,22 @@
                         </div>
                     </div>
 
-                    <!-- BOTONES DE ACCIÓN: CLONAR TAL CUAL VS REGENERAR -->
+                    <!-- BOTONES DE ACCIÓN: la copia fiel es la original tal
+                         cual (sin IA); la IA gratis solo hace variantes nuevas
+                         por texto o cambios de color, nunca un clon exacto. -->
                     <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <button id="btn-clone-exact" onclick="generateThumbnailWithAI(true)" class="btn-action-cloner" style="justify-content: center; font-size: 14px; padding: 13px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
-                            <span>🎯 Clonar Tal Cual (Fiel a la Original)</span>
+                        <button id="btn-clone-exact" onclick="applyOriginalWithSpanishTitle()" class="btn-action-cloner" style="grid-column: 1 / -1; justify-content: center; font-size: 14px; padding: 13px; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);">
+                            <span>✅ Original + título en español (copia fiel, sin IA)</span>
                         </button>
-                        <button id="btn-generate-ai-thumb" onclick="generateThumbnailWithAI(false)" class="btn-execute-search" style="justify-content: center; font-size: 14px; padding: 13px;">
+                        <button id="btn-generate-ai-thumb" onclick="generateThumbnailWithAI()" class="btn-execute-search" style="justify-content: center; font-size: 14px; padding: 13px;">
                             <span>🎨 Solo cambiar colores (variación sutil)</span>
+                        </button>
+                        <button id="btn-new-variant" onclick="generateTextVariant()" class="btn-execute-search" style="justify-content: center; font-size: 14px; padding: 13px;">
+                            <span>✨ Variante nueva por texto (IA gratis)</span>
                         </button>
                     </div>
                     <div style="margin-top: 10px; font-size: 11px; color: var(--text-dim); line-height: 1.5;">
-                        ℹ️ Todo gratis, sin cuenta ni saldo: "Clonar Tal Cual" recrea la miniatura usando la original como referencia (imagen a imagen, FLUX por Pollinations) con el prompt completo: descripción visual + sujeto + fondo + paleta + dirección de arte + título del video + texto en español. Queda muy parecida, no idéntica al píxel, y trae una marca pequeña de Pollinations abajo a la derecha (se puede recortar). "Solo cambiar colores" deja la misma miniatura y le combina varios cambios sutiles a la vez (color + luz + tono), y sale SIN título. Si la IA gratis no responde, el cambio se aplica directo en tu navegador, y el clonado exacto te deja tu miniatura original con el título en español encima: el lienzo nunca queda vacío. El texto largo ya no se corta: se achica y se parte en líneas.
+                        ℹ️ Sin clon falso: ningún modelo gratis copia la miniatura al píxel (los que lo hacen son de pago). "Original + título en español" usa tu miniatura tal cual, con el título real traducido encima: copia fiel, gratis y al instante. "Solo cambiar colores" deja la misma imagen con otros colores, luz y tono, y sale SIN título. "Variante nueva por texto" crea una imagen nueva con la descripción de la miniatura (FLUX gratis por Pollinations, o Schnell): es una reinterpretación, no la original, y trae una marca pequeña de Pollinations abajo a la derecha (se puede recortar). El texto largo ya no se corta: se achica y se parte en líneas.
                     </div>
                 </div>
 
@@ -1617,7 +1622,7 @@
         // Classic API anónima, límite 1 petición cada 15 s). GPT Image 2,
         // Nano Banana y FLUX.2 Dev son DE PAGO en Puter (User-Pays) y con
         // la cuenta sin saldo muestran el aviso "Low Balance", así que el
-        // clonado YA NO USA PUTER PARA IMÁGENES DE EDICIÓN. Verificado por
+        // la edición de imágenes YA NO USA PUTER. Verificado por
         // curl el 2026-11-05: flux + image= (miniatura pública como
         // referencia) devuelve JPEG en ~5 s, con
         // Access-Control-Allow-Origin: * (el canvas no se contamina). El
@@ -1648,11 +1653,36 @@
             }
         }
 
-        // Clonado exacto LOCAL (sin IA): dibuja la miniatura original tal
-        // cual en el canvas y la guarda como imagen generada. Es el último
-        // recurso del clonado exacto: si no hay IA gratis disponible, el
-        // usuario se queda con su miniatura original (fiel al píxel) y el
-        // título en español encima, en vez de un lienzo vacío.
+        // Variante solo-texto de Pollinations (sin imagen de referencia):
+        // misma API gratuita, mismo límite de 1 petición cada 15 s.
+        async function generateWithPollinationsText(prompt) {
+            const seed = Math.floor(Math.random() * 1000000);
+            const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt)
+                + "?model=flux&width=1280&height=720&seed=" + seed;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 120000);
+            try {
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.status === 429) throw new Error("Pollinations solo permite 1 imagen cada 15 segundos: espera un poco y reintenta.");
+                if (!res.ok) throw new Error("Pollinations devolvió HTTP " + res.status);
+                const blob = await res.blob();
+                if (!blob.type.startsWith("image/")) throw new Error("Pollinations no devolvió una imagen.");
+                const img = new Image();
+                img.src = URL.createObjectURL(blob);
+                return img;
+            } catch (err) {
+                clearTimeout(timeoutId);
+                console.warn("Pollinations (texto) falló:", err);
+                return null;
+            }
+        }
+
+        // Copia fiel LOCAL (sin IA): dibuja la miniatura original tal cual
+        // en el canvas y la guarda como imagen generada. Es el camino
+        // principal de la copia fiel: la original (fiel al píxel) + el
+        // título en español encima, en vez de un clon de IA que no existe
+        // gratis.
         async function applyLocalExactClone(refImageDataUrl) {
             return new Promise((resolve) => {
                 const canvas = document.getElementById('canvas-ai-thumb');
@@ -1829,14 +1859,152 @@
             }
         }
 
-        async function generateThumbnailWithAI(isExact = false) {
+        // COPIA FIEL (sin IA): la miniatura original tal cual + el título
+        // real en español encima. Es el camino principal porque ningún
+        // modelo gratis clona al píxel: Pollinations ignora la referencia y
+        // los modelos que sí la respetan son de pago. Instantáneo y gratis.
+        async function applyOriginalWithSpanishTitle() {
+            const btnExact = document.getElementById('btn-clone-exact');
+            const btnMod = document.getElementById('btn-generate-ai-thumb');
+            const btnNew = document.getElementById('btn-new-variant');
+            const statusBox = document.getElementById('ai-gen-status');
+            const placeholder = document.getElementById('ai-thumb-placeholder');
+            const overlayBox = document.getElementById('ai-overlay-box');
+            if (btnExact) btnExact.disabled = true;
+            if (btnMod) btnMod.disabled = true;
+            if (btnNew) btnNew.disabled = true;
+            statusBox.style.display = 'block';
+            statusBox.style.background = 'rgba(59, 130, 246, 0.15)';
+            statusBox.style.borderColor = '#3b82f6';
+            statusBox.style.color = '#93c5fd';
+            statusBox.innerText = "Cargando tu miniatura original y poniéndole el título en español...";
+            try {
+                const refImage = await getOriginalThumbnailDataUrl();
+                if (!refImage) throw new Error("No se pudo cargar la miniatura original.");
+                const ok = await applyLocalExactClone(refImage);
+                if (!ok) throw new Error("No se pudo cargar la miniatura original.");
+                placeholder.style.display = 'none';
+                overlayBox.style.display = 'flex';
+                statusBox.style.display = 'none';
+                const suggestedText = originalThumbText || currentAdaptation?.thumbnail_cloner?.hook_text || "";
+                if (suggestedText) {
+                    document.getElementById('ai-overlay-text').value = suggestedText;
+                    applyOverlayText();
+                }
+                showToast("Miniatura original con el título en español encima — copia fiel, sin IA y sin costo.");
+            } catch (e) {
+                console.error("Error preparando la miniatura original:", e);
+                statusBox.style.display = 'block';
+                statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+                statusBox.style.borderColor = '#ef4444';
+                statusBox.style.color = '#fca5a5';
+                statusBox.innerText = "No se pudo cargar la miniatura original. Reintenta en unos segundos.";
+                showToast("Error cargando la miniatura original");
+            } finally {
+                if (btnExact) btnExact.disabled = false;
+                if (btnMod) btnMod.disabled = false;
+                if (btnNew) btnNew.disabled = false;
+            }
+        }
+
+        // VARIANTE NUEVA POR TEXTO (IA gratis): crea una imagen nueva a
+        // partir de la descripción completa de la miniatura. NO es un clon:
+        // es una reinterpretación. Primero Pollinations (FLUX, sin cuenta),
+        // y si falla, FLUX.1 Schnell de Puter (el único que funcionó sin
+        // saldo). Sin referencia de imagen: el texto manda.
+        async function generateTextVariant() {
             const input = document.getElementById('ai-prompt-input');
             let promptText = input.value.trim();
-            // Clonado exacto: usar el prompt COMPLETO (Visión + sujeto +
-            // fondo + paleta + dirección de arte + texto + título del
-            // video), no solo la descripción visual. Si no se armó el
-            // completo, se usa la descripción de Visión.
-            if (isExact && (fullClonePrompt || originalDetectedPrompt)) {
+            if (fullClonePrompt || originalDetectedPrompt) {
+                promptText = fullClonePrompt || originalDetectedPrompt;
+                input.value = promptText;
+            }
+            if (!promptText) {
+                showToast("Escribe una instrucción para la IA");
+                return;
+            }
+            const btnExact = document.getElementById('btn-clone-exact');
+            const btnMod = document.getElementById('btn-generate-ai-thumb');
+            const btnNew = document.getElementById('btn-new-variant');
+            const statusBox = document.getElementById('ai-gen-status');
+            const placeholder = document.getElementById('ai-thumb-placeholder');
+            const overlayBox = document.getElementById('ai-overlay-box');
+            const canvas = document.getElementById('canvas-ai-thumb');
+            const ctx = canvas.getContext('2d');
+            if (btnExact) btnExact.disabled = true;
+            if (btnMod) btnMod.disabled = true;
+            if (btnNew) btnNew.disabled = true;
+            statusBox.style.display = 'block';
+            statusBox.style.background = 'rgba(59, 130, 246, 0.15)';
+            statusBox.style.borderColor = '#3b82f6';
+            statusBox.style.color = '#93c5fd';
+            statusBox.innerText = "Creando una variante nueva por texto (IA gratis) en 1280x720...";
+            try {
+                const fullPrompt = promptText + ", 16:9 aspect ratio, youtube thumbnail, dramatic cinematic lighting, ultra detailed 8k photography, clean composition without text";
+                let imgEl = await generateWithPollinationsText(fullPrompt);
+                if (!imgEl || !imgEl.src) {
+                    console.warn("Pollinations no respondió, probando Schnell.");
+                    try {
+                        imgEl = await puter.ai.txt2img({ prompt: fullPrompt, model: "black-forest-labs/FLUX.1-schnell" });
+                    } catch (errModel) {
+                        console.warn("Schnell falló, reintentando con el modelo por defecto de Puter:", errModel);
+                        imgEl = await puter.ai.txt2img(fullPrompt);
+                    }
+                }
+                if (!imgEl || !imgEl.src) throw new Error("No se recibió imagen del motor de IA.");
+                const tempImg = new Image();
+                tempImg.crossOrigin = "anonymous";
+                tempImg.onload = () => {
+                    currentGeneratedImage = tempImg;
+                    ctx.clearRect(0, 0, 1280, 720);
+                    ctx.drawImage(tempImg, 0, 0, 1280, 720);
+                    placeholder.style.display = 'none';
+                    overlayBox.style.display = 'flex';
+                    statusBox.style.display = 'none';
+                    if (btnExact) btnExact.disabled = false;
+                    if (btnMod) btnMod.disabled = false;
+                    if (btnNew) btnNew.disabled = false;
+                    showToast("Variante nueva lista: es una reinterpretación por texto, no la miniatura original.");
+                    const suggestedText = originalThumbText || currentAdaptation?.thumbnail_cloner?.hook_text || "";
+                    if (suggestedText) {
+                        document.getElementById('ai-overlay-text').value = suggestedText;
+                    }
+                };
+                tempImg.onerror = () => {
+                    statusBox.style.display = 'block';
+                    statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+                    statusBox.style.borderColor = '#ef4444';
+                    statusBox.style.color = '#fca5a5';
+                    statusBox.innerText = "La imagen generada no se pudo cargar. Reintenta en unos segundos.";
+                    if (btnExact) btnExact.disabled = false;
+                    if (btnMod) btnMod.disabled = false;
+                    if (btnNew) btnNew.disabled = false;
+                    showToast("Error cargando la imagen generada");
+                };
+                tempImg.src = imgEl.src;
+            } catch (e) {
+                console.error("Error en variante por texto:", e);
+                statusBox.style.display = 'block';
+                statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+                statusBox.style.borderColor = '#ef4444';
+                statusBox.style.color = '#fca5a5';
+                statusBox.innerText = "Hubo una pausa temporal en el servicio de IA. Puedes reintentar en unos segundos.";
+                if (btnExact) btnExact.disabled = false;
+                if (btnMod) btnMod.disabled = false;
+                if (btnNew) btnNew.disabled = false;
+                showToast("Error en el servicio de IA");
+            }
+        }
+
+        // VARIACIÓN SOLO DE COLORES (la única acción de este botón): la
+        // misma miniatura con otros colores, luz y tono, sin título. Ya no
+        // hay clon exacto por IA aquí: la copia fiel es la original tal cual
+        // (applyOriginalWithSpanishTitle) y la variante nueva por texto es
+        // generateTextVariant.
+        async function generateThumbnailWithAI() {
+            const input = document.getElementById('ai-prompt-input');
+            let promptText = input.value.trim();
+            if (fullClonePrompt || originalDetectedPrompt) {
                 promptText = fullClonePrompt || originalDetectedPrompt;
                 input.value = promptText;
             }
@@ -1847,6 +2015,7 @@
 
             const btnExact = document.getElementById('btn-clone-exact');
             const btnMod = document.getElementById('btn-generate-ai-thumb');
+            const btnNew = document.getElementById('btn-new-variant');
             const statusBox = document.getElementById('ai-gen-status');
             const placeholder = document.getElementById('ai-thumb-placeholder');
             const overlayBox = document.getElementById('ai-overlay-box');
@@ -1855,107 +2024,44 @@
 
             if (btnExact) btnExact.disabled = true;
             if (btnMod) btnMod.disabled = true;
+            if (btnNew) btnNew.disabled = true;
             statusBox.style.display = 'block';
             statusBox.style.background = 'rgba(59, 130, 246, 0.15)';
             statusBox.style.borderColor = '#3b82f6';
             statusBox.style.color = '#93c5fd';
-            statusBox.innerText = isExact
-                ? "Clonando la miniatura usando la original como referencia (imagen a imagen) en 1280x720..."
-                : "Aplicando variación sutil de color, luz y tono a la miniatura original...";
+            statusBox.innerText = "Aplicando variación sutil de color, luz y tono a la miniatura original...";
 
             try {
                 let imgEl;
-                // CLONADO EXACTO: imagen a imagen GRATIS con Pollinations
-                // (FLUX, sin cuenta ni saldo) usando la URL pública de la
-                // miniatura como referencia. Si Pollinations falla, se cae al
-                // camino viejo de solo texto con Schnell (el único modelo de
-                // Puter que funcionó sin saldo) y se avisa: esa recreación NO
-                // quedará igual a la original. Si también falla Schnell, el
-                // último recurso es la miniatura original tal cual con el
-                // título en español encima (ver abajo): el lienzo nunca
-                // queda vacío.
-                let usedTextOnlyFallback = false;
-                let refImage = null; // miniatura original en base64, para los respaldos locales
-                if (isExact) {
-                    const refUrl = currentSelectedVideo ? (currentSelectedVideo.maxres_thumbnail_url || currentSelectedVideo.thumbnail_url || "") : "";
-                    const editPrompt = "Recreate this exact YouTube thumbnail image as faithfully as possible from the input image: keep the same subject, face, facial expression, pose, clothing, background, composition, framing, lighting and color palette. Do not add, remove, move or restyle any element. Do not add any text. Details to preserve: " + promptText;
-                    if (refUrl) {
-                        imgEl = await generateWithPollinations(editPrompt, refUrl);
-                    }
-                    if (!imgEl || !imgEl.src) {
-                        console.warn("Clonado gratis con referencia no disponible, cayendo a solo texto.");
-                        usedTextOnlyFallback = true;
-                    }
-                    refImage = await getOriginalThumbnailDataUrl();
-                } else {
-                    // VARIACIÓN SOLO DE COLORES: también imagen a imagen con
-                    // la original como referencia, con tres cambios sutiles
-                    // (color + luz + tono). Si la edición con IA falla, NO se
-                    // genera una imagen distinta por texto: se aplica el
-                    // cambio de color LOCAL sobre la original (gratis, exacto).
-                    refImage = await getOriginalThumbnailDataUrl();
-                    const refUrl = currentSelectedVideo ? (currentSelectedVideo.maxres_thumbnail_url || currentSelectedVideo.thumbnail_url || "") : "";
-                    if (!refImage && !refUrl) {
-                        throw new Error("No se pudo cargar la miniatura original como referencia para variar sus colores.");
-                    }
-                    const colorDir = COLOR_VARIATIONS[Math.floor(Math.random() * COLOR_VARIATIONS.length)];
-                    const lightTweak = LIGHT_TWEAKS[Math.floor(Math.random() * LIGHT_TWEAKS.length)];
-                    const toneTweak = TONE_TWEAKS[Math.floor(Math.random() * TONE_TWEAKS.length)];
-                    const colorPrompt = "Edit this exact YouTube thumbnail image with ONLY subtle changes, combining these three tweaks: (1) color: " + colorDir + "; (2) light: " + lightTweak + "; (3) tone: " + toneTweak + ". Remove ALL text, words and lettering from the image completely, reconstructing cleanly the areas where the text was, so the result has no text at all. Keep everything else exactly the same: same subject, face, facial expression, pose, clothing, background, composition, framing and layout. Do not add, remove, move or restyle any other element. Details to preserve: " + promptText;
-                    imgEl = refUrl ? await generateWithPollinations(colorPrompt, refUrl) : null;
-                    if (!imgEl || !imgEl.src) {
-                        const okLocal = await applyLocalColorShift(refImage || refUrl);
-                        if (okLocal) {
-                            placeholder.style.display = 'none';
-                            overlayBox.style.display = 'flex';
-                            statusBox.style.display = 'none';
-                            if (btnExact) btnExact.disabled = false;
-                            if (btnMod) btnMod.disabled = false;
-                            showToast("La IA no respondió; se aplicó el cambio de color directo sobre tu miniatura (sin IA).");
-                            return;
-                        }
-                        throw new Error("No se pudo aplicar la variación de color con la imagen original como referencia. Reintenta en unos segundos.");
-                    }
+                // VARIACIÓN SOLO DE COLORES: imagen a imagen con la
+                // original como referencia (Pollinations, gratis), con tres
+                // cambios sutiles (color + luz + tono). Si la edición con IA
+                // falla, NO se genera una imagen distinta por texto: se
+                // aplica el cambio de color LOCAL sobre la original
+                // (gratis, exacto).
+                const refImage = await getOriginalThumbnailDataUrl();
+                const refUrl = currentSelectedVideo ? (currentSelectedVideo.maxres_thumbnail_url || currentSelectedVideo.thumbnail_url || "") : "";
+                if (!refImage && !refUrl) {
+                    throw new Error("No se pudo cargar la miniatura original como referencia para variar sus colores.");
                 }
+                const colorDir = COLOR_VARIATIONS[Math.floor(Math.random() * COLOR_VARIATIONS.length)];
+                const lightTweak = LIGHT_TWEAKS[Math.floor(Math.random() * LIGHT_TWEAKS.length)];
+                const toneTweak = TONE_TWEAKS[Math.floor(Math.random() * TONE_TWEAKS.length)];
+                const colorPrompt = "Edit this exact YouTube thumbnail image with ONLY subtle changes, combining these three tweaks: (1) color: " + colorDir + "; (2) light: " + lightTweak + "; (3) tone: " + toneTweak + ". Remove ALL text, words and lettering from the image completely, reconstructing cleanly the areas where the text was, so the result has no text at all. Keep everything else exactly the same: same subject, face, facial expression, pose, clothing, background, composition, framing and layout. Do not add, remove, move or restyle any other element. Details to preserve: " + promptText;
+                imgEl = refUrl ? await generateWithPollinations(colorPrompt, refUrl) : null;
                 if (!imgEl || !imgEl.src) {
-                    const fullPrompt = promptText + ", 16:9 aspect ratio, youtube thumbnail, dramatic cinematic lighting, ultra detailed 8k photography, clean composition without text";
-                    try {
-                        imgEl = await puter.ai.txt2img({
-                            prompt: fullPrompt,
-                            model: "black-forest-labs/FLUX.1-schnell"
-                        });
-                    } catch (errModel) {
-                        console.warn("Schnell falló, reintentando con el modelo por defecto de Puter:", errModel);
-                        try {
-                            imgEl = await puter.ai.txt2img(fullPrompt);
-                        } catch (errDefault) {
-                            console.warn("El modelo por defecto de Puter también falló:", errDefault);
-                            imgEl = null;
-                        }
+                    const okLocal = await applyLocalColorShift(refImage || refUrl);
+                    if (okLocal) {
+                        placeholder.style.display = 'none';
+                        overlayBox.style.display = 'flex';
+                        statusBox.style.display = 'none';
+                        if (btnExact) btnExact.disabled = false;
+                        if (btnMod) btnMod.disabled = false;
+                        if (btnNew) btnNew.disabled = false;
+                        showToast("La IA no respondió; se aplicó el cambio de color directo sobre tu miniatura (sin IA).");
+                        return;
                     }
-                    if (isExact) usedTextOnlyFallback = true;
-                    // Último recurso del clonado exacto: si NINGUNA IA gratis
-                    // respondió, dejar la miniatura original tal cual (fiel
-                    // al píxel) con el título en español encima, en vez de
-                    // un lienzo vacío. La variación de colores no usa este
-                    // recurso: ya tiene su propio respaldo local.
-                    if ((!imgEl || !imgEl.src) && isExact && refImage) {
-                        const okExact = await applyLocalExactClone(refImage);
-                        if (okExact) {
-                            placeholder.style.display = 'none';
-                            overlayBox.style.display = 'flex';
-                            statusBox.style.display = 'none';
-                            if (btnExact) btnExact.disabled = false;
-                            if (btnMod) btnMod.disabled = false;
-                            const suggestedText = originalThumbText || currentAdaptation?.thumbnail_cloner?.hook_text || "";
-                            if (suggestedText) {
-                                document.getElementById('ai-overlay-text').value = suggestedText;
-                                applyOverlayText();
-                            }
-                            showToast("Sin IA gratis disponible en este momento: te dejé tu miniatura original con el título en español encima.");
-                            return;
-                        }
-                    }
+                    throw new Error("No se pudo aplicar la variación de color con la imagen original como referencia. Reintenta en unos segundos.");
                 }
 
                 if (imgEl && imgEl.src) {
@@ -1971,24 +2077,16 @@
                         statusBox.style.display = 'none';
                         if (btnExact) btnExact.disabled = false;
                         if (btnMod) btnMod.disabled = false;
-                        if (isExact && usedTextOnlyFallback) {
-                            showToast("Clonado sin la imagen original como referencia: es solo una recreación por texto y no quedará igual. Reintenta en unos segundos.");
-                        } else {
-                            showToast(isExact ? "¡Miniatura clonada con la original como referencia!" : "¡Variación lista! Misma miniatura, otros colores, luz y tono, sin título.");
-                        }
+                        if (btnNew) btnNew.disabled = false;
+                        showToast("¡Variación lista! Misma miniatura, otros colores, luz y tono, sin título.");
 
-                        // Texto del clon: primero el título real leído de la
-                        // miniatura original (traducido a español); si no se
-                        // pudo leer, la frase sugerida del backend. SOLO se
-                        // pone encima en el clonado exacto: la variación de
-                        // solo colores sale SIN título (ni quemado en la
-                        // imagen ni puesto encima), limpia para usarla como
-                        // base. El texto queda en el campo por si el usuario
-                        // quiere aplicarlo a mano con "Aplicar".
+                        // La variación de solo colores sale SIN título (ni
+                        // quemado en la imagen ni puesto encima), limpia para
+                        // usarla como base. El texto queda en el campo por si
+                        // el usuario quiere aplicarlo a mano con "Aplicar".
                         const suggestedText = originalThumbText || currentAdaptation?.thumbnail_cloner?.hook_text || "";
                         if (suggestedText) {
                             document.getElementById('ai-overlay-text').value = suggestedText;
-                            if (isExact) applyOverlayText();
                         }
                     };
                     tempImg.onerror = () => {
@@ -1999,6 +2097,7 @@
                         statusBox.innerText = "La imagen generada no se pudo cargar. Reintenta en unos segundos.";
                         if (btnExact) btnExact.disabled = false;
                         if (btnMod) btnMod.disabled = false;
+                        if (btnNew) btnNew.disabled = false;
                         showToast("Error cargando la imagen generada");
                     };
                     tempImg.src = imgEl.src;
@@ -2018,6 +2117,7 @@
                     : "Hubo una pausa temporal en el servicio de IA. Puedes reintentar en unos segundos.";
                 if (btnExact) btnExact.disabled = false;
                 if (btnMod) btnMod.disabled = false;
+                if (btnNew) btnNew.disabled = false;
                 showToast("Error en el servicio de IA");
             }
         }
